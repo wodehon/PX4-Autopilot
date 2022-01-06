@@ -59,6 +59,8 @@ SafetyButton::SafetyButton() :
 	if (_safety_disabled) {
 		_safety_btn_off = true;
 	}
+
+	_has_px4io = PX4_MFT_HW_SUPPORTED(PX4_MFT_PX4IO);
 }
 
 SafetyButton::~SafetyButton()
@@ -193,7 +195,7 @@ SafetyButton::Run()
 	CheckButton();
 
 	// control safety switch LED & publish safety topic
-	if (!PX4_MFT_HW_SUPPORTED(PX4_MFT_PX4IO)) {
+	if (!_has_px4io) {
 		FlashButton();
 
 		const bool safety_off = _safety_btn_off || _safety_disabled;

@@ -85,6 +85,7 @@ private:
 
 	safety_s _safety{};
 
+	bool				_has_px4io{false};
 	uint8_t				_button_counter{0};
 	uint8_t				_blink_counter{0};
 	bool				_safety_disabled{false};	///< circuit breaker to disable the safety button
