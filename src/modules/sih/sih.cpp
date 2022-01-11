@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2019-2020 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2019-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,9 +55,7 @@ using namespace time_literals;
 
 Sih::Sih() :
 	ModuleParams(nullptr)
-{
-
-}
+{}
 
 Sih::~Sih()
 {
@@ -83,6 +81,80 @@ void Sih::run()
 	_vehicle = (VehicleType)constrain(_sih_vtype.get(), static_cast<typeof _sih_vtype.get()>(0),
 					  static_cast<typeof _sih_vtype.get()>(2));
 
+
+#if defined(ENABLE_LOCKSTEP_SCHEDULER)
+	lockstep_loop();
+#else
+	realtime_loop();
+#endif
+}
+
+#if defined(ENABLE_LOCKSTEP_SCHEDULER)
+
+// Get current timestamp in microseconds
+uint64_t micros()
+{
+	struct timespec ts;
+	timespec_get(&ts, TIME_UTC);
+	return ((uint64_t)ts.tv_sec) * 1000000 + ((uint64_t)ts.tv_nsec) / 1000;
+}
+
+void Sih::lockstep_loop()
+{
+
+	int rate = math::min(_imu_gyro_ratemax.get(), _imu_integration_rate.get());
+
+	// default to 400Hz (2500 us interval)
+	if (rate <= 0) {
+		rate = 400;
+	}
+
+	// 200 - 2000 Hz
+	int sim_interval_us = math::constrain(int(roundf(1e6f / rate)), 500, 5000);
+
+	float speed_factor = 1.f;
+	const char *speedup = getenv("PX4_SIM_SPEED_FACTOR");
+
+	if (speedup) {
+		speed_factor = atof(speedup);
+	}
+
+	int rt_interval_us = int(roundf(sim_interval_us / speed_factor));
+
+	PX4_INFO("Simulation loop with %d Hz (%d us sim time interval)", rate, sim_interval_us);
+	PX4_INFO("Simulation with %.1fx speedup. Loop with (%d us wall time interval)", (double)speed_factor, rt_interval_us);
+
+	if (_lockstep_component < 0) {
+		_lockstep_component = px4_lockstep_register_component();
+	}
+
+	_last_iteration_wall_time_us = micros();
+
+	while (!should_exit()) {
+		_current_simulation_time_us += sim_interval_us;
+		struct timespec ts;
+		abstime_to_ts(&ts, _current_simulation_time_us);
+		px4_clock_settime(CLOCK_MONOTONIC, &ts);
+
+		perf_begin(_loop_perf);
+		sensor_step();
+		perf_end(_loop_perf);
+
+		px4_lockstep_progress(_lockstep_component);
+		px4_lockstep_wait_for_components();
+
+		int sleep_time = math::max(0, rt_interval_us - (int)(micros() - _last_iteration_wall_time_us));
+		usleep(sleep_time);
+		_last_iteration_wall_time_us = micros();
+	}
+
+	px4_lockstep_unregister_component(_lockstep_component);
+}
+#endif
+
+void Sih::realtime_loop()
+{
+
 	int rate = _imu_gyro_ratemax.get();
 
 	// default to 250 Hz (4000 us interval)
@@ -99,7 +171,7 @@ void Sih::run()
 	while (!should_exit()) {
 		px4_sem_wait(&_data_semaphore);     // periodic real time wakeup
 		perf_begin(_loop_perf);
-		inner_loop();
+		sensor_step();
 		perf_end(_loop_perf);
 	}
 
@@ -107,12 +179,13 @@ void Sih::run()
 	px4_sem_destroy(&_data_semaphore);
 }
 
+
 void Sih::timer_callback(void *sem)
 {
 	px4_sem_post((px4_sem_t *)sem);
 }
 
-void Sih::inner_loop()
+void Sih::sensor_step()
 {
 	// check for parameter updates
 	if (_parameter_update_sub.updated()) {
