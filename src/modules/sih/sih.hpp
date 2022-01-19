@@ -193,6 +193,7 @@ private:
 	perf_counter_t  _loop_perf;
 
 	hrt_abstime _last_run{0};
+	hrt_abstime _last_actuator_output_time{0};
 	hrt_abstime _baro_time{0};
 	hrt_abstime _gps_time{0};
 	hrt_abstime _airspeed_time{0};

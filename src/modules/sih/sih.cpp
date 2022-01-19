@@ -141,9 +141,19 @@ void Sih::lockstep_loop()
 		perf_end(_loop_perf);
 
 		px4_lockstep_progress(_lockstep_component);
-		px4_lockstep_wait_for_components();
 
-		int sleep_time = math::max(0, rt_interval_us - (int)(micros() - _last_iteration_wall_time_us));
+		// Only do lock-step once we received the first actuator output
+		int sleep_time;
+
+		if (_last_actuator_output_time <= 0) {
+			PX4_DEBUG("SIH starting up - no lockstep yet");
+			sleep_time = math::max(0, sim_interval_us - (int)(micros() - _last_iteration_wall_time_us));
+
+		} else {
+			px4_lockstep_wait_for_components();
+			sleep_time = math::max(0, rt_interval_us - (int)(micros() - _last_iteration_wall_time_us));
+		}
+
 		usleep(sleep_time);
 		_last_iteration_wall_time_us = micros();
 	}
@@ -353,6 +363,8 @@ void Sih::read_motors()
 	float pwm_middle = 0.5f * (PWM_DEFAULT_MIN + PWM_DEFAULT_MAX);
 
 	if (_actuator_out_sub.update(&actuators_out)) {
+		_last_actuator_output_time = actuators_out.timestamp;
+
 		for (int i = 0; i < NB_MOTORS; i++) { // saturate the motor signals
 			if ((_vehicle == VehicleType::FW && i < 3) || (_vehicle == VehicleType::TS
 					&& i > 3)) { // control surfaces in range [-1,1]
