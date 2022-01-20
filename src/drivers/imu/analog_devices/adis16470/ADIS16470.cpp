@@ -44,8 +44,7 @@ ADIS16470::ADIS16470(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio),
-	_px4_accel(get_device_id(), config.rotation),
-	_px4_gyro(get_device_id(), config.rotation)
+	_rotation(config.rotation)
 {
 	if (_drdy_gpio != 0) {
 		_drdy_missed_perf = perf_alloc(PC_COUNT, MODULE_NAME": DRDY missed");
@@ -375,13 +374,13 @@ bool ADIS16470::Configure()
 		}
 	}
 
-	_px4_accel.set_scale(CONSTANTS_ONE_G / 2048.f);
-	_px4_accel.set_range(40.f * CONSTANTS_ONE_G);
-	_px4_gyro.set_scale(math::radians(2000.f / 32768.f));
-	_px4_gyro.set_range(math::radians(2000.f));
+	_accel_scale = CONSTANTS_ONE_G / 2048.f;
+	_accel_range = 40.f * CONSTANTS_ONE_G;
+	_gyro_scale = math::radians(2000.f / 32768.f));
+	_gyro_range = math::radians(2000.f));
 
-	_px4_accel.set_scale(1.25f * CONSTANTS_ONE_G / 1000.0f); // accel 1.25 mg/LSB
-	_px4_gyro.set_scale(math::radians(0.025f)); // gyro 0.025 °/sec/LSB
+	_accel_scale = 1.25f * CONSTANTS_ONE_G / 1000.0f; // accel 1.25 mg/LSB
+	_gyro_scale = math::radians(0.025f)); // gyro 0.025 °/sec/LSB
 
 	return success;
 }

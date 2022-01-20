@@ -43,9 +43,7 @@
 #pragma once
 
 #include <drivers/drv_hrt.h>
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
 #include <lib/drivers/barometer/PX4Barometer.hpp>
-#include <lib/drivers/gyroscope/PX4Gyroscope.hpp>
 #include <lib/drivers/magnetometer/PX4Magnetometer.hpp>
 #include <lib/geo/geo.h>
 #include <lib/perf/perf_counter.h>
@@ -165,14 +163,14 @@ private:
 
 	// simulated sensor instances
 	static constexpr uint8_t ACCEL_COUNT_MAX = 3;
-	PX4Accelerometer _px4_accel[ACCEL_COUNT_MAX] {
+	uORB::PublicationMulti<sensor_accel_s> _accel_pub[ACCEL_COUNT_MAX] {
 		{1310988, ROTATION_NONE}, // 1310988: DRV_IMU_DEVTYPE_SIM, BUS: 1, ADDR: 1, TYPE: SIMULATION
 		{1310996, ROTATION_NONE}, // 1310996: DRV_IMU_DEVTYPE_SIM, BUS: 2, ADDR: 1, TYPE: SIMULATION
 		{1311004, ROTATION_NONE}, // 1311004: DRV_IMU_DEVTYPE_SIM, BUS: 3, ADDR: 1, TYPE: SIMULATION
 	};
 
 	static constexpr uint8_t GYRO_COUNT_MAX = 3;
-	PX4Gyroscope _px4_gyro[GYRO_COUNT_MAX] {
+	uORB::PublicationMulti<sensor_gyro_s> _gyro_pub[GYRO_COUNT_MAX] {
 		{1310988, ROTATION_NONE}, // 1310988: DRV_IMU_DEVTYPE_SIM, BUS: 1, ADDR: 1, TYPE: SIMULATION
 		{1310996, ROTATION_NONE}, // 1310996: DRV_IMU_DEVTYPE_SIM, BUS: 2, ADDR: 1, TYPE: SIMULATION
 		{1311004, ROTATION_NONE}, // 1311004: DRV_IMU_DEVTYPE_SIM, BUS: 3, ADDR: 1, TYPE: SIMULATION
@@ -271,12 +269,11 @@ private:
 
 	bool _accel_blocked[ACCEL_COUNT_MAX] {};
 	bool _accel_stuck[ACCEL_COUNT_MAX] {};
-	sensor_accel_fifo_s _last_accel_fifo{};
 	matrix::Vector3f _last_accel[GYRO_COUNT_MAX] {};
 
 	bool _gyro_blocked[GYRO_COUNT_MAX] {};
 	bool _gyro_stuck[GYRO_COUNT_MAX] {};
-	sensor_gyro_fifo_s _last_gyro_fifo{};
+	sensor_imu_fifo_s _last_gyro_fifo{};
 	matrix::Vector3f _last_gyro[GYRO_COUNT_MAX] {};
 
 	bool _baro_blocked{false};

@@ -36,7 +36,6 @@
  */
 
 #include "gyro.hpp"
-#include <lib/drivers/gyroscope/PX4Gyroscope.hpp>
 
 const char *const UavcanGyroBridge::NAME = "gyro";
 
@@ -67,7 +66,7 @@ void UavcanGyroBridge::imu_sub_cb(const uavcan::ReceivedDataStructure<uavcan::eq
 	}
 
 	// Cast our generic CDev pointer to the sensor-specific driver class
-	PX4Gyroscope *gyro = (PX4Gyroscope *)channel->h_driver;
+	uORB::PublicationMulti<sensor_gyro_s> *gyro = (uORB::PublicationMulti<sensor_gyro_s> *)channel->h_driver;
 
 	if (gyro == nullptr) {
 		return;
@@ -87,13 +86,13 @@ int UavcanGyroBridge::init_driver(uavcan_bridge::Channel *channel)
 	device_id.devid_s.devtype = DRV_GYR_DEVTYPE_UAVCAN;
 	device_id.devid_s.address = static_cast<uint8_t>(channel->node_id);
 
-	channel->h_driver = new PX4Gyroscope(device_id.devid);
+	channel->h_driver = new uORB::PublicationMulti<sensor_gyro_s>(ORB_ID(sensor_gyro));
 
 	if (channel->h_driver == nullptr) {
 		return PX4_ERROR;
 	}
 
-	PX4Gyroscope *gyro = (PX4Gyroscope *)channel->h_driver;
+	uORB::PublicationMulti<sensor_gyro_s> *gyro = (uORB::PublicationMulti<sensor_gyro_s> *)channel->h_driver;
 
 	channel->instance = gyro->get_instance();
 

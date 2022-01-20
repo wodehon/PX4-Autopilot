@@ -99,9 +99,8 @@ ADIS16448::ADIS16448(const I2CSPIDriverConfig &config) :
 	SPI(config),
 	I2CSPIDriver(config),
 	_drdy_gpio(config.drdy_gpio), // TODO: DRDY disabled
-	_px4_accel(get_device_id(), config.rotation),
+	_rotation(config.rotation),
 	_px4_baro(get_device_id()),
-	_px4_gyro(get_device_id(), config.rotation),
 	_px4_mag(get_device_id(), config.rotation)
 {
 	if (_drdy_gpio != 0) {
@@ -528,12 +527,12 @@ bool ADIS16448::Configure()
 		}
 	}
 
-	_px4_accel.set_scale(0.833f * 1e-3f * CONSTANTS_ONE_G); // 0.833 mg/LSB
-	_px4_gyro.set_scale(math::radians(0.04f));              // 0.04 °/sec/LSB
+	_accel_scale = 0.833f * 1e-3f * CONSTANTS_ONE_G; // 0.833 mg/LSB
+	_gyro_scale = math::radians(0.04f));              // 0.04 °/sec/LSB
 	_px4_mag.set_scale(142.9f * 1e-6f);                     // μgauss/LSB
 
-	_px4_accel.set_range(18.f * CONSTANTS_ONE_G);
-	_px4_gyro.set_range(math::radians(1000.f));
+	_accel_range = 18.f * CONSTANTS_ONE_G;
+	_gyro_range = math::radians(1000.f));
 
 	return success;
 }

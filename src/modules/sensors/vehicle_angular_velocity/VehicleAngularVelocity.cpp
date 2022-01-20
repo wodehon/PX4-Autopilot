@@ -133,7 +133,7 @@ bool VehicleAngularVelocity::UpdateSampleRate()
 				const uint8_t samples = roundf(configured_interval_us / publish_interval_us);
 
 				if (_fifo_available) {
-					_sensor_fifo_sub.set_required_updates(math::constrain(samples, (uint8_t)1, sensor_gyro_fifo_s::ORB_QUEUE_LENGTH));
+					_sensor_fifo_sub.set_required_updates(math::constrain(samples, (uint8_t)1, sensor_imu_fifo_s::ORB_QUEUE_LENGTH));
 
 				} else {
 					_sensor_sub.set_required_updates(math::constrain(samples, (uint8_t)1, sensor_gyro_s::ORB_QUEUE_LENGTH));
@@ -254,36 +254,36 @@ bool VehicleAngularVelocity::SensorSelectionUpdate(const hrt_abstime &time_now_u
 
 			const bool device_id_valid = (device_id != 0);
 
-			// see if the selected sensor publishes sensor_gyro_fifo
+			// see if the selected sensor publishes sensor_imu_fifo
 			for (uint8_t i = 0; i < MAX_SENSOR_COUNT; i++) {
-				uORB::SubscriptionData<sensor_gyro_fifo_s> sensor_gyro_fifo_sub{ORB_ID(sensor_gyro_fifo), i};
+				uORB::SubscriptionData<sensor_imu_fifo_s> sensor_imu_fifo_sub{ORB_ID(sensor_imu_fifo), i};
 
-				if (sensor_gyro_fifo_sub.get().device_id != 0) {
-					// if no gyro was selected use the first valid sensor_gyro_fifo
-					if (!device_id_valid && (time_now_us < sensor_gyro_fifo_sub.get().timestamp + 1_s)) {
-						device_id = sensor_gyro_fifo_sub.get().device_id;
+				if (sensor_imu_fifo_sub.get().device_id != 0) {
+					// if no gyro was selected use the first valid sensor_imu_fifo
+					if (!device_id_valid && (time_now_us < sensor_imu_fifo_sub.get().timestamp + 1_s)) {
+						device_id = sensor_imu_fifo_sub.get().device_id;
 					}
 
-					if ((sensor_gyro_fifo_sub.get().device_id == device_id)
+					if ((sensor_imu_fifo_sub.get().device_id == device_id)
 					    && _sensor_fifo_sub.ChangeInstance(i) && _sensor_fifo_sub.registerCallback()) {
 
 						// make sure non-FIFO sub is unregistered
 						_sensor_sub.unregisterCallback();
 
-						_calibration.set_device_id(sensor_gyro_fifo_sub.get().device_id);
+						_calibration.set_device_id(sensor_imu_fifo_sub.get().device_id);
 
 						if (_calibration.enabled()) {
-							_selected_sensor_device_id = sensor_gyro_fifo_sub.get().device_id;
+							_selected_sensor_device_id = sensor_imu_fifo_sub.get().device_id;
 
 							_timestamp_sample_last = 0;
-							_filter_sample_rate_hz = 1.f / (sensor_gyro_fifo_sub.get().dt * 1e-6f);
+							_filter_sample_rate_hz = 1.f / (sensor_imu_fifo_sub.get().dt * 1e-6f);
 							_update_sample_rate = true;
 							_reset_filters = true;
 							_bias.zero();
 							_fifo_available = true;
 
 							perf_count(_selection_changed_perf);
-							PX4_DEBUG("selecting sensor_gyro_fifo:%" PRIu8 " %" PRIu32, i, _selected_sensor_device_id);
+							PX4_DEBUG("selecting sensor_imu_fifo:%" PRIu8 " %" PRIu32, i, _selected_sensor_device_id);
 							return true;
 
 						} else {
@@ -731,25 +731,25 @@ void VehicleAngularVelocity::Run()
 
 	if (_fifo_available) {
 		// process all outstanding fifo messages
-		sensor_gyro_fifo_s sensor_fifo_data;
+		sensor_imu_fifo_s sensor_fifo_data;
 
 		while (_sensor_fifo_sub.update(&sensor_fifo_data)) {
 			const float inverse_dt_s = 1e6f / sensor_fifo_data.dt;
 			const int N = sensor_fifo_data.samples;
-			static constexpr int FIFO_SIZE_MAX = sizeof(sensor_fifo_data.x) / sizeof(sensor_fifo_data.x[0]);
+			static constexpr int FIFO_SIZE_MAX = sizeof(sensor_fifo_data.gyro_x) / sizeof(sensor_fifo_data.gyro_x[0]);
 
 			if ((sensor_fifo_data.dt > 0) && (N > 0) && (N <= FIFO_SIZE_MAX)) {
 				Vector3f angular_velocity_uncalibrated;
 				Vector3f angular_acceleration_uncalibrated;
 
-				int16_t *raw_data_array[] {sensor_fifo_data.x, sensor_fifo_data.y, sensor_fifo_data.z};
+				int16_t *raw_data_array[] {sensor_fifo_data.gyro_x, sensor_fifo_data.gyro_y, sensor_fifo_data.gyro_z};
 
 				for (int axis = 0; axis < 3; axis++) {
 					// copy raw int16 sensor samples to float array for filtering
 					float data[FIFO_SIZE_MAX];
 
 					for (int n = 0; n < N; n++) {
-						data[n] = sensor_fifo_data.scale * raw_data_array[axis][n];
+						data[n] = sensor_fifo_data.gyro_scale * raw_data_array[axis][n];
 					}
 
 					// save last filtered sample

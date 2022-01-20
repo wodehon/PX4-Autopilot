@@ -41,7 +41,5 @@ px4_add_module(
 		adis16470_main.cpp
 		Analog_Devices_ADIS16470_registers.hpp
 	DEPENDS
-		drivers_accelerometer
-		drivers_gyroscope
 		px4_work_queue
 	)

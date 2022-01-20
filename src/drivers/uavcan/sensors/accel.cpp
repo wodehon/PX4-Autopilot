@@ -36,7 +36,6 @@
  */
 
 #include "accel.hpp"
-#include <lib/drivers/accelerometer/PX4Accelerometer.hpp>
 
 const char *const UavcanAccelBridge::NAME = "accel";
 
@@ -69,7 +68,6 @@ void UavcanAccelBridge::imu_sub_cb(const uavcan::ReceivedDataStructure<uavcan::e
 	}
 
 	// Cast our generic CDev pointer to the sensor-specific driver class
-	PX4Accelerometer *accel = (PX4Accelerometer *)channel->h_driver;
 
 	if (accel == nullptr) {
 		return;
@@ -87,15 +85,15 @@ int UavcanAccelBridge::init_driver(uavcan_bridge::Channel *channel)
 	device_id.devid_s.devtype = DRV_ACC_DEVTYPE_UAVCAN;
 	device_id.devid_s.address = static_cast<uint8_t>(channel->node_id);
 
-	channel->h_driver = new PX4Accelerometer(device_id.devid);
+	channel->h_driver = uORB::PublicationMulti<sensor_accel_s>(ORB_ID(sensor_accel));
 
 	if (channel->h_driver == nullptr) {
 		return PX4_ERROR;
 	}
 
-	PX4Accelerometer *accel = (PX4Accelerometer *)channel->h_driver;
+	auto *accel_pub = static_cast<uORB::PublicationMulti<sensor_accel_s> *>(channel->h_driver);
 
-	channel->instance = accel->get_instance();
+	channel->instance = accel_pub->get_instance();
 
 	if (channel->instance < 0) {
 		PX4_ERR("UavcanAccel: Unable to get a class instance");

@@ -87,12 +87,16 @@ public:
 	void set_reset_samples(uint8_t reset_samples) { _reset_samples_min = reset_samples; }
 	uint8_t get_reset_samples() const { return _reset_samples_min; }
 
+	uint8_t integrated_samples() const { return _integrated_samples; }
+
 	/**
 	 * Is the Integrator ready to reset?
 	 *
 	 * @return		true if integrator has sufficient data (minimum interval & samples satisfied) to reset.
 	 */
 	inline bool integral_ready() const { return (_integrated_samples >= _reset_samples_min) || (_integral_dt >= _reset_interval_min); }
+
+	float integral_dt() const { return _integral_dt; }
 
 	void reset()
 	{
