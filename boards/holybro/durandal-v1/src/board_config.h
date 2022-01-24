@@ -156,8 +156,8 @@
 
 #define BOARD_NUM_SPI_CFG_HW_VERSIONS 2
 
-#define VD00   HW_VER_REV(0x0,0x0) // Durandal,  Ver 0        Rev 0
-#define VD01   HW_VER_REV(0x0,0x1) // Durandal,  Ver 0        Rev 1
+#define VD00000000   HW_VER_REV(0x0,0x0) // Durandal,  Ver 0        Rev 0
+#define VD00000001   HW_VER_REV(0x0,0x1) // Durandal,  Ver 0        Rev 1
 
 /* CAN Silence
  *
