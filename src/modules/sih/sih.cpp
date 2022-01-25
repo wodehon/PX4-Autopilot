@@ -60,6 +60,7 @@ Sih::Sih() :
 Sih::~Sih()
 {
 	perf_free(_loop_perf);
+	perf_free(_loop_interval_perf);
 }
 
 void Sih::run()
@@ -131,6 +132,8 @@ void Sih::lockstep_loop()
 	_last_iteration_wall_time_us = micros();
 
 	while (!should_exit()) {
+		perf_count(_loop_interval_perf);
+
 		_current_simulation_time_us += sim_interval_us;
 		struct timespec ts;
 		abstime_to_ts(&ts, _current_simulation_time_us);

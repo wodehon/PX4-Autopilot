@@ -190,7 +190,8 @@ private:
 	px4_sem_t       _data_semaphore;
 	hrt_call 	_timer_call;
 
-	perf_counter_t  _loop_perf;
+	perf_counter_t  _loop_perf{perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")};
+	perf_counter_t  _loop_interval_perf{perf_alloc(PC_INTERVAL, MODULE_NAME": cycle interval")};
 
 	hrt_abstime _last_run{0};
 	hrt_abstime _last_actuator_output_time{0};
