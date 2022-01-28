@@ -95,9 +95,9 @@ void Sih::run()
 // Get current timestamp in microseconds
 uint64_t micros()
 {
-	struct timespec ts;
-	timespec_get(&ts, TIME_UTC);
-	return ((uint64_t)ts.tv_sec) * 1000000 + ((uint64_t)ts.tv_nsec) / 1000;
+	struct timeval t;
+	gettimeofday(&t, nullptr);
+	return t.tv_sec * ((uint64_t)1000000) + t.tv_usec;
 }
 
 void Sih::lockstep_loop()

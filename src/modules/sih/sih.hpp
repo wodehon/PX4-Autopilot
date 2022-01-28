@@ -80,6 +80,10 @@
 #include <uORB/topics/distance_sensor.h>
 #include <uORB/topics/airspeed.h>
 
+#if defined(ENABLE_LOCKSTEP_SCHEDULER)
+#include <sys/time.h>
+#endif
+
 using namespace time_literals;
 
 extern "C" __EXPORT int sih_main(int argc, char *argv[]);
