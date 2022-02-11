@@ -323,7 +323,7 @@ void MulticopterPositionControl::Run()
 		setDt(dt);
 
 		if (_vehicle_control_mode_sub.updated()) {
-			const bool position_control_enabled = _vehicle_control_mode.flag_multicopter_position_control_enabled;
+			const bool previous_position_control_enabled = _vehicle_control_mode.flag_multicopter_position_control_enabled;
 
 			if (_vehicle_control_mode_sub.update(&_vehicle_control_mode)) {
 				if (!position_control_enabled && _vehicle_control_mode.flag_multicopter_position_control_enabled) {
