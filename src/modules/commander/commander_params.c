@@ -1115,3 +1115,16 @@ PARAM_DEFINE_FLOAT(COM_WIND_WARN, -1.f);
  * @group Commander
  */
 PARAM_DEFINE_INT32(COM_FW_PERM_STAB, 0);
+
+/**
+ * Quadchute action
+ *
+ * Autonomous action after a quadchute was triggered.
+ *
+ * @group Commander
+ * @value 0 Disabled
+ * @value 1 Loiter
+ * @value 2 RTL
+ * @value 3 Land
+ */
+PARAM_DEFINE_INT32(COM_VT_QC_ACTION, 3);

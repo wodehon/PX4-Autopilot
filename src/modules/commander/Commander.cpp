@@ -2759,7 +2759,25 @@ Commander::run()
 					}
 				}
 
-				if (fd_status_flags.roll || fd_status_flags.pitch || fd_status_flags.alt || fd_status_flags.ext) {
+				if (!_quadchute_triggered && _param_vt_qc_action.get() && _status.is_vtol
+				    && _status.vehicle_type != vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
+					if (fd_status_flags.qc_roll || fd_status_flags.qc_pitch || fd_status_flags.qc_min_alt || fd_status_flags.qc_alt_err) {
+						_quadchute_triggered = true;
+						mavlink_log_emergency(&_mavlink_log_pub, "Critical failure detected: Transition to hover\t");
+						/* EVENT
+						 * @description
+						 * Critical failures include an exceeding tilt angle, altitude failure or an external failure trigger.
+						 *
+						 * <profile name="dev">
+						 * Quadchute can be disabled with the parameter <param>QC_enabled</param>.
+						 * </profile>
+						 */
+						events::send(events::ID("commander_fd_quadchute"), {events::Log::Emergency, events::LogInternal::Warning},
+							     "Critical failure detected: transition to hover");
+						// send_quadchute_command();
+					}
+
+				} else if (fd_status_flags.roll || fd_status_flags.pitch || fd_status_flags.alt || fd_status_flags.ext) {
 					const bool is_right_after_takeoff = hrt_elapsed_time(&_status.takeoff_time) < (1_s * _param_com_lkdown_tko.get());
 
 					if (is_right_after_takeoff && !_lockdown_triggered) {

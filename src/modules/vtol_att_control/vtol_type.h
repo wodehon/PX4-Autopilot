@@ -199,9 +199,6 @@ public:
 	float _thrust_transition = 0.0f;	// thrust value applied during a front transition (tailsitter & tiltrotor only)
 	float _last_thr_in_fw_mode = 0.0f;
 
-	float _ra_hrate = 0.0f;			// rolling average on height rate for quadchute condition
-	float _ra_hrate_sp = 0.0f;		// rolling average on height rate setpoint for quadchute condition
-
 	bool _flag_was_in_trans_mode = false;	// true if mode has just switched to transition
 
 	hrt_abstime _trans_finished_ts = 0;
@@ -246,10 +243,7 @@ public:
 
 	DEFINE_PARAMETERS_CUSTOM_PARENT(ModuleParams,
 					(ParamBool<px4::params::VT_ELEV_MC_LOCK>) _param_vt_elev_mc_lock,
-					(ParamFloat<px4::params::VT_FW_MIN_ALT>) _param_vt_fw_min_alt,
-					(ParamFloat<px4::params::VT_FW_ALT_ERR>) _param_vt_fw_alt_err,
-					(ParamInt<px4::params::VT_FW_QC_P>) _param_vt_fw_qc_p,
-					(ParamInt<px4::params::VT_FW_QC_R>) _param_vt_fw_qc_r,
+
 					(ParamFloat<px4::params::VT_F_TR_OL_TM>) _param_vt_f_tr_ol_tm,
 					(ParamFloat<px4::params::VT_TRANS_MIN_TM>) _param_vt_trans_min_tm,
 

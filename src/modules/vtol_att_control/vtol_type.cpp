@@ -277,67 +277,6 @@ void VtolType::check_quadchute_condition()
 	} else {
 		_quadchute_command_treated = false;
 	}
-
-	if (!_tecs_running) {
-		// reset the filtered height rate and heigh rate setpoint if TECS is not running
-		_ra_hrate = 0.0f;
-		_ra_hrate_sp = 0.0f;
-	}
-
-	if (_v_control_mode->flag_armed && !_land_detected->landed) {
-		Eulerf euler = Quatf(_v_att->q);
-
-		// fixed-wing minimum altitude
-		if (_param_vt_fw_min_alt.get() > FLT_EPSILON) {
-
-			if (-(_local_pos->z) < _param_vt_fw_min_alt.get()) {
-				_attc->quadchute(VtolAttitudeControl::QuadchuteReason::MinimumAltBreached);
-			}
-		}
-
-		// adaptive quadchute
-		if (_param_vt_fw_alt_err.get() > FLT_EPSILON && _v_control_mode->flag_control_altitude_enabled) {
-
-			// We use tecs for tracking in FW and local_pos_sp during transitions
-			if (_tecs_running) {
-				// 1 second rolling average
-				_ra_hrate = (49 * _ra_hrate + _tecs_status->height_rate) / 50;
-				_ra_hrate_sp = (49 * _ra_hrate_sp + _tecs_status->height_rate_setpoint) / 50;
-
-				// are we dropping while requesting significant ascend?
-				if (((_tecs_status->altitude_sp - _tecs_status->altitude_filtered) > _param_vt_fw_alt_err.get()) &&
-				    (_ra_hrate < -1.0f) &&
-				    (_ra_hrate_sp > 1.0f)) {
-
-					_attc->quadchute(VtolAttitudeControl::QuadchuteReason::LossOfAlt);
-				}
-
-			} else {
-				const bool height_error = _local_pos->z_valid && ((-_local_pos_sp->z - -_local_pos->z) > _param_vt_fw_alt_err.get());
-				const bool height_rate_error = _local_pos->v_z_valid && (_local_pos->vz > 1.0f) && (_local_pos->z_deriv > 1.0f);
-
-				if (height_error && height_rate_error) {
-					_attc->quadchute(VtolAttitudeControl::QuadchuteReason::LargeAltError);
-				}
-			}
-		}
-
-		// fixed-wing maximum pitch angle
-		if (_param_vt_fw_qc_p.get() > 0) {
-
-			if (fabsf(euler.theta()) > fabsf(math::radians(_param_vt_fw_qc_p.get()))) {
-				_attc->quadchute(VtolAttitudeControl::QuadchuteReason::MaximumPitchExceeded);
-			}
-		}
-
-		// fixed-wing maximum roll angle
-		if (_param_vt_fw_qc_r.get() > 0) {
-
-			if (fabsf(euler.phi()) > fabsf(math::radians(_param_vt_fw_qc_r.get()))) {
-				_attc->quadchute(VtolAttitudeControl::QuadchuteReason::MaximumRollExceeded);
-			}
-		}
-	}
 }
 
 bool VtolType::set_idle_mc()

@@ -229,6 +229,8 @@ private:
 
 		(ParamBool<px4::params::COM_FW_PERM_STAB>) _param_com_fw_perm_stab,
 
+		(ParamInt<px4::params::COM_VT_QC_ACTION>) _param_vt_qc_action,
+
 		// Offboard
 		(ParamFloat<px4::params::COM_OF_LOSS_T>) _param_com_of_loss_t,
 		(ParamInt<px4::params::COM_OBL_ACT>) _param_com_obl_act,
@@ -328,7 +330,7 @@ private:
 	bool		_flight_termination_triggered{false};
 	bool		_lockdown_triggered{false};
 	bool            _imbalanced_propeller_check_triggered{false};
-
+	bool		_quadchute_triggered{false};
 
 	hrt_abstime	_datalink_last_heartbeat_gcs{0};
 	hrt_abstime	_datalink_last_heartbeat_avoidance_system{0};
