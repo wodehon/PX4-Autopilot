@@ -659,19 +659,6 @@ float NPFG::switchDistance(float wp_radius) const
 	return math::min(wp_radius, track_error_bound_ * switch_distance_multiplier_);
 } // switchDistance
 
-Vector2f NPFG::getLocalPlanarVector(const Vector2d &origin, const Vector2d &target) const
-{
-	/* this is an approximation for small angles, proposed by [2] */
-	const double x_angle = math::radians(target(0) - origin(0));
-	const double y_angle = math::radians(target(1) - origin(1));
-	const double x_origin_cos = cos(math::radians(origin(0)));
-
-	return Vector2f{
-		static_cast<float>(x_angle * CONSTANTS_RADIUS_OF_EARTH),
-		static_cast<float>(y_angle *x_origin_cos * CONSTANTS_RADIUS_OF_EARTH),
-	};
-} // getLocalPlanarVector
-
 void NPFG::updateRollSetpoint()
 {
 	float roll_new = atanf(lateral_accel_ * 1.0f / CONSTANTS_ONE_G);

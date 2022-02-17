@@ -708,21 +708,6 @@ private:
 	/**
 	 * [Copied directly from ECL_L1_Pos_Controller]
 	 *
-	 * Convert a 2D vector from WGS84 to planar coordinates.
-	 *
-	 * This converts from latitude and longitude to planar
-	 * coordinates with (0,0) being at the position of ref and
-	 * returns a vector in meters towards wp.
-	 *
-	 * @param ref The reference position in WGS84 coordinates
-	 * @param wp The point to convert to into the local coordinates, in WGS84 coordinates
-	 * @return The vector in meters pointing from the reference position to the coordinates
-	 */
-	matrix::Vector2f getLocalPlanarVector(const matrix::Vector2d &origin, const matrix::Vector2d &target) const;
-
-	/**
-	 * [Copied directly from ECL_L1_Pos_Controller]
-	 *
 	 * Update roll angle setpoint. This will also apply slew rate limits if set.
 	 */
 	void updateRollSetpoint();
