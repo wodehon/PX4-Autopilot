@@ -2254,8 +2254,8 @@ Commander::run()
 					_status_changed = true;
 				}
 
-				if (_status_flags.vtol_transition_failure != _vtol_status.vtol_transition_failsafe) {
-					_status_flags.vtol_transition_failure = _vtol_status.vtol_transition_failsafe;
+				if (_status.vtol_fw_actuation_failure != _vtol_status.vtol_transition_failsafe) {
+					_status.vtol_fw_actuation_failure = _vtol_status.vtol_transition_failsafe;
 					_status_changed = true;
 				}
 
@@ -2759,9 +2759,12 @@ Commander::run()
 					}
 				}
 
-				if (!_quadchute_triggered && _param_vt_qc_action.get() && _status.is_vtol
-				    && _status.vehicle_type != vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
-					if (fd_status_flags.qc_roll || fd_status_flags.qc_pitch || fd_status_flags.qc_min_alt || fd_status_flags.qc_alt_err) {
+				const bool flight_state_enable_quadchute = _status.is_vtol
+						&& (_status.vehicle_type != vehicle_status_s::VEHICLE_TYPE_ROTARY_WING || _status.in_transition_mode);
+
+				if (flight_state_enable_quadchute && !_quadchute_triggered && _param_vt_qc_action.get()) {
+					if (fd_status_flags.qc_roll || fd_status_flags.qc_pitch || fd_status_flags.qc_min_alt || fd_status_flags.qc_alt_err
+					    || fd_status_flags.qc_trans_tmt) {
 						_quadchute_triggered = true;
 						mavlink_log_emergency(&_mavlink_log_pub, "Critical failure detected: Transition to hover\t");
 						/* EVENT
@@ -2775,6 +2778,9 @@ Commander::run()
 						events::send(events::ID("commander_fd_quadchute"), {events::Log::Emergency, events::LogInternal::Warning},
 							     "Critical failure detected: transition to hover");
 						// send_quadchute_command();
+						send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION, vehicle_status_s::VEHICLE_TYPE_ROTARY_WING,
+								     1.0f);
+						_status.vtol_fw_actuation_failure = true;
 					}
 
 				} else if (fd_status_flags.roll || fd_status_flags.pitch || fd_status_flags.alt || fd_status_flags.ext) {
@@ -4339,6 +4345,18 @@ void Commander::send_parachute_command()
 
 	set_tune_override(tune_control_s::TUNE_ID_PARACHUTE_RELEASE);
 }
+
+// void Commander::send_quadchute_command()
+// {
+// 	uORB::Subscription vehicle_status_sub{ORB_ID(vehicle_status)};
+// 		vehicle_status_s vehicle_status{};
+// 		vehicle_status_sub.copy(&vehicle_status);
+// 		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION,
+// 				     (float)(vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING ?
+// 					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW :
+// 					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC), 0.0f);
+
+// }
 
 void Commander::checkWindAndWarn()
 {

@@ -171,14 +171,6 @@ void Tiltrotor::update_vtol_state()
 					_vtol_schedule.transition_start = hrt_absolute_time();
 				}
 
-				// check front transition timeout
-				if (_param_vt_trans_timeout.get()  > FLT_EPSILON) {
-					if (time_since_trans_start > _param_vt_trans_timeout.get()) {
-						// transition timeout occured, abort transition
-						_attc->quadchute(VtolAttitudeControl::QuadchuteReason::TransitionTimeout);
-					}
-				}
-
 				break;
 			}
 

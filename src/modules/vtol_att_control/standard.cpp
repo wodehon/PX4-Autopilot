@@ -254,13 +254,6 @@ void Standard::update_transition_state()
 		const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
 		q_sp.copyTo(_v_att_sp->q_d);
 
-		// check front transition timeout
-		if (_param_vt_trans_timeout.get() > FLT_EPSILON) {
-			if (time_since_trans_start > _param_vt_trans_timeout.get()) {
-				// transition timeout occured, abort transition
-				_attc->quadchute(VtolAttitudeControl::QuadchuteReason::TransitionTimeout);
-			}
-		}
 
 	} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_MC) {
 

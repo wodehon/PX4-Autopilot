@@ -95,16 +95,6 @@ class VtolAttitudeControl : public ModuleBase<VtolAttitudeControl>, public Modul
 {
 public:
 
-	enum class QuadchuteReason {
-		TransitionTimeout = 0,
-		ExternalCommand,
-		MinimumAltBreached,
-		LossOfAlt,
-		LargeAltError,
-		MaximumPitchExceeded,
-		MaximumRollExceeded,
-	};
-
 	VtolAttitudeControl();
 	~VtolAttitudeControl() override;
 
@@ -120,10 +110,8 @@ public:
 	bool init();
 
 	bool is_fixed_wing_requested() { return _transition_command == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW; };
-	void quadchute(QuadchuteReason reason);
 	int get_transition_command() {return _transition_command;}
 	bool get_immediate_transition() {return _immediate_transition;}
-	void reset_immediate_transition() {_immediate_transition = false;}
 
 	struct actuator_controls_s 			*get_actuators_fw_in() {return &_actuators_fw_in;}
 	struct actuator_controls_s 			*get_actuators_mc_in() {return &_actuators_mc_in;}

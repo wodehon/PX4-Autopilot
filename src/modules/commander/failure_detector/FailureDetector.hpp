@@ -60,6 +60,7 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/pwm_input.h>
 
@@ -77,6 +78,7 @@ union failure_detector_status_u {
 		uint16_t qc_pitch : 1;
 		uint16_t qc_min_alt : 1;
 		uint16_t qc_alt_err : 1;
+		uint16_t qc_trans_tmt : 1;
 	} flags;
 	uint16_t value {0};
 };
@@ -100,6 +102,7 @@ private:
 	void updateImbalancedPropStatus();
 	void updateMinHeightStatus(const vehicle_status_s &vehicle_status);
 	void updateAdaptiveQC(const vehicle_status_s &vehicle_status, const vehicle_control_mode_s &vehicle_control_mode);
+	void updateTransitionTimeout();
 
 	failure_detector_status_u _status{};
 
@@ -122,9 +125,13 @@ private:
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _vehicle_local_position_setpoint_sub{ORB_ID(vehicle_local_position_setpoint});
 	uORB::Subscription _tecs_status_sub{ORB_ID(tecs_status)};
+	uORB::Subscription _vtol_vehicle_status_sub{ORB_ID(vtol_vehicle_status)};
 
 	float _ra_hrate{0.f};
 	float _ra_hrate_sp{0.f};
+
+	hrt_abstime _transition_start_timestamp{0};
+	bool _was_in_transition_FW_prev{false};
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::FD_FAIL_P>) _param_fd_fail_p,
@@ -139,6 +146,7 @@ private:
 		(ParamFloat<px4::params::VT_FW_MIN_ALT>) _param_vt_fw_min_alt,
 		(ParamFloat<px4::params::VT_FW_ALT_ERR>) _param_vt_fw_alt_err,
 		(ParamInt<px4::params::VT_FW_QC_P>) _param_vt_fw_qc_p,
-		(ParamInt<px4::params::VT_FW_QC_R>) _param_vt_fw_qc_r
+		(ParamInt<px4::params::VT_FW_QC_R>) _param_vt_fw_qc_r,
+		(ParamFloat<px4::params::VT_TRANS_TIMEOUT>) _param_vt_trans_timeout
 	)
 };

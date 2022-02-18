@@ -213,8 +213,6 @@ void VtolType::update_fw_state()
 			blendThrottleAfterFrontTransition(progress);
 		}
 	}
-
-	check_quadchute_condition();
 }
 
 void VtolType::update_transition_state()
@@ -224,10 +222,6 @@ void VtolType::update_transition_state()
 	_transition_dt = math::constrain(_transition_dt, 0.0001f, 0.02f);
 	_last_loop_ts = t_now;
 	_throttle_blend_start_ts = t_now;
-
-
-
-	check_quadchute_condition();
 }
 
 float VtolType::update_and_get_backtransition_pitch_sp()
@@ -264,19 +258,6 @@ float VtolType::update_and_get_backtransition_pitch_sp()
 bool VtolType::can_transition_on_ground()
 {
 	return !_v_control_mode->flag_armed || _land_detected->landed;
-}
-
-void VtolType::check_quadchute_condition()
-{
-	if (_attc->get_transition_command() == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC && _attc->get_immediate_transition()
-	    && !_quadchute_command_treated) {
-		_attc->quadchute(VtolAttitudeControl::QuadchuteReason::ExternalCommand);
-		_quadchute_command_treated = true;
-		_attc->reset_immediate_transition();
-
-	} else {
-		_quadchute_command_treated = false;
-	}
 }
 
 bool VtolType::set_idle_mc()

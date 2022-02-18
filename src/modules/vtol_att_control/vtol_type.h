@@ -140,11 +140,6 @@ public:
 	virtual void waiting_on_tecs() {}
 
 	/**
-	 * Checks for fixed-wing failsafe condition and issues abort request if needed.
-	 */
-	void check_quadchute_condition();
-
-	/**
 	 * Returns true if we're allowed to do a mode transition on the ground.
 	 */
 	bool can_transition_on_ground();
@@ -214,9 +209,6 @@ public:
 
 	float _accel_to_pitch_integ = 0;
 
-	bool _quadchute_command_treated{false};
-
-
 	/**
 	 * @brief      Sets mc motor minimum pwm to VT_IDLE_PWM_MC which ensures
 	 *             that they are spinning in mc mode.
@@ -254,7 +246,6 @@ public:
 					(ParamFloat<px4::params::VT_B_TRANS_THR>) _param_vt_b_trans_thr,
 					(ParamFloat<px4::params::VT_ARSP_BLEND>) _param_vt_arsp_blend,
 					(ParamBool<px4::params::FW_ARSP_MODE>) _param_fw_arsp_mode,
-					(ParamFloat<px4::params::VT_TRANS_TIMEOUT>) _param_vt_trans_timeout,
 					(ParamFloat<px4::params::MPC_XY_CRUISE>) _param_mpc_xy_cruise,
 					(ParamBool<px4::params::VT_FW_DIFTHR_EN>) _param_vt_fw_difthr_en,
 					(ParamFloat<px4::params::VT_FW_DIFTHR_SC>) _param_vt_fw_difthr_sc,
