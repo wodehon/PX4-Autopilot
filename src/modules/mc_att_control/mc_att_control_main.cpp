@@ -216,6 +216,10 @@ MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt,
 	attitude_setpoint.timestamp = hrt_absolute_time();
 
 	_vehicle_attitude_setpoint_pub.publish(attitude_setpoint);
+
+	// update attitude controller setpoint immediately
+	_attitude_control.setAttitudeSetpoint(Quatf(attitude_setpoint.q_d), attitude_setpoint.yaw_sp_move_rate);
+	_thrust_setpoint_body = Vector3f(attitude_setpoint.thrust_body);
 }
 
 void
@@ -244,20 +248,30 @@ MulticopterAttitudeControl::Run()
 
 	if (_vehicle_attitude_sub.update(&v_att)) {
 
+		//const bool quat_reset = (_quat_reset_counter != v_att.quat_reset_counter);
+
 		// Check for new attitude setpoint
 		if (_vehicle_attitude_setpoint_sub.updated()) {
 			vehicle_attitude_setpoint_s vehicle_attitude_setpoint;
-			_vehicle_attitude_setpoint_sub.update(&vehicle_attitude_setpoint);
-			_attitude_control.setAttitudeSetpoint(Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
-			_thrust_setpoint_body = Vector3f(vehicle_attitude_setpoint.thrust_body);
+
+			if (_vehicle_attitude_setpoint_sub.copy(&vehicle_attitude_setpoint)) {
+				_attitude_control.setAttitudeSetpoint(Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
+				_thrust_setpoint_body = Vector3f(vehicle_attitude_setpoint.thrust_body);
+				_last_attitude_setpoint = vehicle_attitude_setpoint.timestamp;
+			}
 		}
 
 		// Check for a heading reset
 		if (_quat_reset_counter != v_att.quat_reset_counter) {
 			const Quatf delta_q_reset(v_att.delta_q_reset);
+
 			// for stabilized attitude generation only extract the heading change from the delta quaternion
 			_man_yaw_sp += Eulerf(delta_q_reset).psi();
-			_attitude_control.adaptAttitudeSetpoint(delta_q_reset);
+
+			if (v_att.timestamp > _last_attitude_setpoint) {
+				// adapt existing attitude setpoint unless it was generated after the current attitude estimate
+				_attitude_control.adaptAttitudeSetpoint(delta_q_reset);
+			}
 
 			_quat_reset_counter = v_att.quat_reset_counter;
 		}
