@@ -2284,18 +2284,19 @@ FixedwingPositionControl::Run()
 			}
 		}
 
-		// update the reset counters in any case
-		_alt_reset_counter = _local_pos.vz_reset_counter;
-		_pos_reset_counter = _local_pos.vxy_reset_counter;
-
 		// Convert Local setpoints to global setpoints
 		if (!_global_local_proj_ref.isInitialized()
-		    || (_global_local_proj_ref.getProjectionReferenceTimestamp() != _local_pos.ref_timestamp)) {
-
+		    || (_global_local_proj_ref.getProjectionReferenceTimestamp() != _local_pos.ref_timestamp)
+		    || (_local_pos.vxy_reset_counter != _pos_reset_counter)) {
 			_global_local_proj_ref.initReference(_local_pos.ref_lat, _local_pos.ref_lon,
 							     _local_pos.ref_timestamp);
 			_global_local_alt0 = _local_pos.ref_alt;
 		}
+
+		// update the reset counters in any case
+		_alt_reset_counter = _local_pos.vz_reset_counter;
+		_pos_reset_counter = _local_pos.vxy_reset_counter;
+
 
 		airspeed_poll();
 		manual_control_setpoint_poll();
