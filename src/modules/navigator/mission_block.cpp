@@ -743,7 +743,7 @@ MissionBlock::set_land_item(struct mission_item_s *item, bool at_current_locatio
 
 		vehicle_command_s vcmd = {};
 		vcmd.command = NAV_CMD_DO_VTOL_TRANSITION;
-		vcmd.param1 = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+		vcmd.param1 = vtol_vehicle_status_s::VTOL_STATE_MC;
 		vcmd.param2 = 0.0f;
 		_navigator->publish_vehicle_cmd(&vcmd);
 	}

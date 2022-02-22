@@ -85,7 +85,7 @@ VtolTakeoff::on_active()
 
 		case vtol_takeoff_state::ALIGN_HEADING: {
 
-				set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
+				set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VTOL_STATE_FW);
 				_mission_item.lat = _loiter_location(0);
 				_mission_item.lon = _loiter_location(1);
 				position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();

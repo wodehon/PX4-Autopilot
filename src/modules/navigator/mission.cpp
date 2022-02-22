@@ -359,7 +359,7 @@ Mission::set_execution_mode(const uint8_t mode)
 				    _navigator->get_vstatus()->is_vtol &&
 				    !_navigator->get_land_detected()->landed) {
 
-					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
+					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VTOL_STATE_FW);
 
 					position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 					pos_sp_triplet->previous = pos_sp_triplet->current;
@@ -885,7 +885,7 @@ Mission::set_mission_items()
 						new_work_item_type = WORK_ITEM_TYPE_TRANSITON_AFTER_TAKEOFF;
 					}
 
-					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
+					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VTOL_STATE_FW);
 					_mission_item.yaw = _navigator->get_local_position()->heading;
 
 					// keep current setpoints (FW position controller generates wp to track during transition)
@@ -936,7 +936,7 @@ Mission::set_mission_items()
 				    && _navigator->get_vstatus()->vehicle_type == vehicle_status_s::VEHICLE_TYPE_FIXED_WING
 				    && !_navigator->get_land_detected()->landed) {
 
-					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC);
+					set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VTOL_STATE_MC);
 					_mission_item.altitude = _navigator->get_global_position()->alt;
 					_mission_item.altitude_is_relative = false;
 

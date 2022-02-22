@@ -761,7 +761,7 @@ void Navigator::run()
 			    force_vtol()) {
 				vehicle_command_s vcmd = {};
 				vcmd.command = NAV_CMD_DO_VTOL_TRANSITION;
-				vcmd.param1 = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+				vcmd.param1 = vtol_vehicle_status_s::VTOL_STATE_MC;
 				publish_vehicle_cmd(&vcmd);
 				mavlink_log_info(&_mavlink_log_pub, "Transition to hover mode and descend.\t");
 				events::send(events::ID("navigator_transition_descend"), events::Log::Critical,

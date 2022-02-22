@@ -35,7 +35,7 @@
  * @file VTOL_att_control_main.cpp
  * Implementation of an attitude controller for VTOL airframes. This module receives data
  * from both the fixed wing- and the multicopter attitude controllers and processes it.
- * It computes the correct actuator controls depending on which mode the vehicle is in (hover, forward-
+ * It computes the correct actuator controls depending on which vtol_state the vehicle is in (hover, forward-
  * flight or transition). It also publishes the resulting controls on the actuator controls topics.
  *
  * @author Roman Bapst 		<bapstr@ethz.ch>
@@ -59,8 +59,8 @@ VtolAttitudeControl::VtolAttitudeControl() :
 	WorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl),
 	_loop_perf(perf_alloc(PC_ELAPSED, "vtol_att_control: cycle"))
 {
-	// start vtol in rotary wing mode
-	_vtol_vehicle_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+	// start vtol in rotary wing vtol_state
+	_vtol_vehicle_status.vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 
 	parameters_update();
 
@@ -113,12 +113,12 @@ void VtolAttitudeControl::action_request_poll()
 		if (_action_request_sub.copy(&action_request)) {
 			switch (action_request.action) {
 			case action_request_s::ACTION_VTOL_TRANSITION_TO_MULTICOPTER:
-				_transition_command = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+				_transition_command = vtol_vehicle_status_s::VTOL_STATE_MC;
 				_immediate_transition = false;
 				break;
 
 			case action_request_s::ACTION_VTOL_TRANSITION_TO_FIXEDWING:
-				_transition_command = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW;
+				_transition_command = vtol_vehicle_status_s::VTOL_STATE_FW;
 				_immediate_transition = false;
 				break;
 			}
@@ -140,7 +140,7 @@ void VtolAttitudeControl::vehicle_cmd_poll()
 			const int transition_command_param1 = int(vehicle_command.param1 + 0.5f);
 
 			// deny transition from MC to FW in Takeoff, Land, RTL and Orbit
-			if (transition_command_param1 == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW &&
+			if (transition_command_param1 == vtol_vehicle_status_s::VTOL_STATE_FW &&
 			    (vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_TAKEOFF
 			     || vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND
 			     || vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL
@@ -222,23 +222,34 @@ VtolAttitudeControl::Run()
 
 	perf_begin(_loop_perf);
 
-	const bool updated_fw_in = _actuator_inputs_fw.update(&_actuators_fw_in);
 	const bool updated_mc_in = _actuator_inputs_mc.update(&_actuators_mc_in);
+	const bool updated_fw_in = _actuator_inputs_fw.update(&_actuators_fw_in);
 
-	// run on actuator publications corresponding to VTOL mode
+	// run update_vtol_state when either the mc or fw are updated
+	if (updated_mc_in || updated_fw_in) {
+		// update the vtol state machine which decides which vtol_state we are in
+		_vtol_type->update_vtol_state();
+	}
+
+	// run on actuator publications corresponding to VTOL vtol_state
 	bool should_run = false;
 
-	switch (_vtol_type->get_mode()) {
-	case mode::TRANSITION_TO_FW:
-	case mode::TRANSITION_TO_MC:
+	switch (_vtol_vehicle_status.vtol_state) {
+
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2:
 		should_run = updated_fw_in || updated_mc_in;
 		break;
 
-	case mode::ROTARY_WING:
+	case vtol_vehicle_status_s::VTOL_STATE_MC:
 		should_run = updated_mc_in;
 		break;
 
-	case mode::FIXED_WING:
+	case vtol_vehicle_status_s::VTOL_STATE_FW:
 		should_run = updated_fw_in;
 		break;
 	}
@@ -261,56 +272,48 @@ VtolAttitudeControl::Run()
 		const bool mc_att_sp_updated = _mc_virtual_att_sp_sub.update(&_mc_virtual_att_sp);
 		const bool fw_att_sp_updated = _fw_virtual_att_sp_sub.update(&_fw_virtual_att_sp);
 
-		// update the vtol state machine which decides which mode we are in
-		_vtol_type->update_vtol_state();
-
-		// check in which mode we are in and call mode specific functions
-		switch (_vtol_type->get_mode()) {
-		case mode::TRANSITION_TO_FW:
-			// vehicle is doing a transition to FW
-			_vtol_vehicle_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_FW;
-
-			_fw_virtual_att_sp_sub.update(&_fw_virtual_att_sp);
-
-			if (!_vtol_type->was_in_trans_mode() || mc_att_sp_updated || fw_att_sp_updated) {
-				_vtol_type->update_transition_state();
-				_v_att_sp_pub.publish(_v_att_sp);
-			}
-
-			break;
-
-		case mode::TRANSITION_TO_MC:
-			// vehicle is doing a transition to MC
-			_vtol_vehicle_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_MC;
-
-			_fw_virtual_att_sp_sub.update(&_fw_virtual_att_sp);
-
-			if (!_vtol_type->was_in_trans_mode() || mc_att_sp_updated || fw_att_sp_updated) {
-				_vtol_type->update_transition_state();
-				_v_att_sp_pub.publish(_v_att_sp);
-			}
-
-			break;
-
-		case mode::ROTARY_WING:
-			// vehicle is in rotary wing mode
-			_vtol_vehicle_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
-
+		// check in which vtol_state we are in and call vtol_state specific functions
+		switch (_vtol_vehicle_status.vtol_state) {
+		case vtol_vehicle_status_s::VTOL_STATE_MC:
 			_vtol_type->update_mc_state();
 			_v_att_sp_pub.publish(_v_att_sp);
 
 			break;
 
-		case mode::FIXED_WING:
-			// vehicle is in fw mode
-			_vtol_vehicle_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW;
-
+		case vtol_vehicle_status_s::VTOL_STATE_FW:
 			if (fw_att_sp_updated) {
 				_vtol_type->update_fw_state();
 				_v_att_sp_pub.publish(_v_att_sp);
 			}
 
 			break;
+
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4:
+
+			_fw_virtual_att_sp_sub.update(&_fw_virtual_att_sp);
+
+			if (!_vtol_type->was_in_trans_mode() || mc_att_sp_updated || fw_att_sp_updated) {
+				_vtol_type->update_transition_state();
+				_v_att_sp_pub.publish(_v_att_sp);
+			}
+
+			break;
+
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2:
+
+			_fw_virtual_att_sp_sub.update(&_fw_virtual_att_sp);
+
+			if (!_vtol_type->was_in_trans_mode() || mc_att_sp_updated || fw_att_sp_updated) {
+				_vtol_type->update_transition_state();
+				_v_att_sp_pub.publish(_v_att_sp);
+			}
+
+			break;
+
 		}
 
 		_vtol_type->fill_actuator_outputs();

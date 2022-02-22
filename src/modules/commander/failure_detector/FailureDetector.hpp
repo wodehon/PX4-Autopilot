@@ -60,7 +60,6 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <uORB/topics/vtol_vehicle_status.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/pwm_input.h>
 
@@ -102,7 +101,7 @@ private:
 	void updateImbalancedPropStatus();
 	void updateMinHeightStatus(const vehicle_status_s &vehicle_status);
 	void updateAdaptiveQC(const vehicle_status_s &vehicle_status, const vehicle_control_mode_s &vehicle_control_mode);
-	void updateTransitionTimeout();
+	void updateTransitionTimeout(const vehicle_status_s &vehicle_status);
 
 	failure_detector_status_u _status{};
 
@@ -125,7 +124,6 @@ private:
 	uORB::Subscription _vehicle_local_position_sub{ORB_ID(vehicle_local_position)};
 	uORB::Subscription _vehicle_local_position_setpoint_sub{ORB_ID(vehicle_local_position_setpoint});
 	uORB::Subscription _tecs_status_sub{ORB_ID(tecs_status)};
-	uORB::Subscription _vtol_vehicle_status_sub{ORB_ID(vtol_vehicle_status)};
 
 	float _ra_hrate{0.f};
 	float _ra_hrate_sp{0.f};

@@ -77,7 +77,7 @@ bool FailureDetector::update(const vehicle_status_s &vehicle_status, const vehic
 	if (vehicle_status.is_vtol) {
 		updateMinHeightStatus(vehicle_status);
 		updateAdaptiveQC(vehicle_status, vehicle_control_mode);
-		updateTransitionTimeout();
+		updateTransitionTimeout(vehicle_status);
 	}
 
 	return _status.value != status_prev.value;
@@ -127,20 +127,14 @@ void FailureDetector::updateAdaptiveQC(const vehicle_status_s &vehicle_status,
 	}
 }
 
-void FailureDetector::updateTransitionTimeout()
+void FailureDetector::updateTransitionTimeout(const vehicle_status_s &vehicle_status)
 {
-	vtol_vehicle_status_s vtol_vehicle_status;
-	_vtol_vehicle_status_sub.update(&vtol_vehicle_status);
-
-	const bool transitioning_to_FW = vtol_vehicle_status.vehicle_vtol_state ==
-					 vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_FW;
-
-	if (!_was_in_transition_FW_prev && transitioning_to_FW) {
+	if (!_was_in_transition_FW_prev && vehicle_status.in_transition_to_fw) {
 		_transition_start_timestamp = hrt_absolute_time();
 		_was_in_transition_FW_prev = true;
 	}
 
-	if (transitioning_to_FW && _param_vt_trans_timeout.get() > FLT_EPSILON) {
+	if (vehicle_status.in_transition_to_fw && _param_vt_trans_timeout.get() > FLT_EPSILON) {
 		if (hrt_elapsed_time(&_transition_start_timestamp) > _param_vt_trans_timeout.get() * 1_s) {
 			// transition timeout occured, abort transition
 			_status.flags.qc_trans_tmt = true;

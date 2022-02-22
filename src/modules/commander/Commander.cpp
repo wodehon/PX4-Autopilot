@@ -344,8 +344,8 @@ int Commander::custom_command(int argc, char *argv[])
 		vehicle_status_sub.copy(&vehicle_status);
 		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION,
 				     (float)(vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING ?
-					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW :
-					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC), 0.0f);
+					     vtol_vehicle_status_s::VTOL_STATE_FW :
+					     vtol_vehicle_status_s::VTOL_STATE_MC), 0.0f);
 
 		return 0;
 	}
@@ -810,7 +810,7 @@ Commander::Commander() :
 	_status_flags.rc_calibration_valid = true;
 
 	// default for vtol is rotary wing
-	_vtol_status.vehicle_vtol_state = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+	_vtol_status.vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 }
 
 bool
@@ -2025,9 +2025,9 @@ Commander::run()
 				_status.system_type = _param_mav_type.get();
 
 				const bool is_rotary = is_rotary_wing(_status) || (is_vtol(_status)
-						       && _vtol_status.vehicle_vtol_state != vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
+						       && _vtol_status.vtol_state != vtol_vehicle_status_s::VTOL_STATE_FW);
 				const bool is_fixed = is_fixed_wing(_status) || (is_vtol(_status)
-						      && _vtol_status.vehicle_vtol_state == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW);
+						      && _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_FW);
 				const bool is_ground = is_ground_rover(_status);
 
 				/* disable manual override for all systems that rely on electronic stabilization */
@@ -2229,7 +2229,7 @@ Commander::run()
 			if (is_vtol(_status)) {
 
 				// Check if there has been any change while updating the flags (transition = rotary wing status)
-				const auto new_vehicle_type = _vtol_status.vehicle_vtol_state == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW ?
+				const auto new_vehicle_type = _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_FW ?
 							      vehicle_status_s::VEHICLE_TYPE_FIXED_WING :
 							      vehicle_status_s::VEHICLE_TYPE_ROTARY_WING;
 
@@ -2238,19 +2238,21 @@ Commander::run()
 					_status_changed = true;
 				}
 
-				const bool new_in_transition = _vtol_status.vehicle_vtol_state ==
-							       vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_FW
-							       || _vtol_status.vehicle_vtol_state == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_MC;
+				const bool in_transition_to_fw = _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1
+								 || _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2
+								 || _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3
+								 || _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4;
 
-				if (_status.in_transition_mode != new_in_transition) {
-					_status.in_transition_mode = new_in_transition;
+				const bool in_transition_to_mc = _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1
+								 || _vtol_status.vtol_state == vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2;
+
+				if (_status.in_transition_mode != (in_transition_to_fw || in_transition_to_mc)) {
+					_status.in_transition_mode = (in_transition_to_fw || in_transition_to_mc);
 					_status_changed = true;
 				}
 
-				if (_status.in_transition_to_fw != (_vtol_status.vehicle_vtol_state ==
-								    vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_FW)) {
-					_status.in_transition_to_fw = (_vtol_status.vehicle_vtol_state ==
-								       vtol_vehicle_status_s::VEHICLE_VTOL_STATE_TRANSITION_TO_FW);
+				if (_status.in_transition_to_fw != in_transition_to_fw) {
+					_status.in_transition_to_fw = in_transition_to_fw;
 					_status_changed = true;
 				}
 
@@ -4353,8 +4355,8 @@ void Commander::send_parachute_command()
 // 		vehicle_status_sub.copy(&vehicle_status);
 // 		send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION,
 // 				     (float)(vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING ?
-// 					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW :
-// 					     vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC), 0.0f);
+// 					     vtol_vehicle_status_s::VTOL_STATE_FW :
+// 					     vtol_vehicle_status_s::VTOL_STATE_MC), 0.0f);
 
 // }
 

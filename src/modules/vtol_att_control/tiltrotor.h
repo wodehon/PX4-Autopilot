@@ -62,25 +62,6 @@ public:
 	void blendThrottleAfterFrontTransition(float scale) override;
 
 private:
-	enum class vtol_mode {
-		MC_MODE = 0,			/**< vtol is in multicopter mode */
-		TRANSITION_FRONT_P1,	/**< vtol is in front transition part 1 mode */
-		TRANSITION_FRONT_P2,	/**< vtol is in front transition part 2 mode */
-		TRANSITION_BACK,		/**< vtol is in back transition mode */
-		FW_MODE					/**< vtol is in fixed wing mode */
-	};
-
-	/**
-	 * Specific to tiltrotor with vertical aligned rear engine/s.
-	 * These engines need to be shut down in fw mode. During the back-transition
-	 * they need to idle otherwise they need too much time to spin up for mc mode.
-	 */
-
-
-	struct {
-		vtol_mode flight_mode;			/**< vtol flight mode, defined by enum vtol_mode */
-		hrt_abstime transition_start;	/**< absoulte time at which front transition started */
-	} _vtol_schedule;
 
 	float _tilt_control{0.0f};		/**< actuator value for the tilt servo */
 
@@ -89,7 +70,6 @@ private:
 	float moveLinear(float start, float stop, float progress);
 
 	void blendThrottleDuringBacktransition(const float scale, const float target_throttle);
-
 
 	hrt_abstime _last_timestamp_disarmed{0}; /**< used for calculating time since arming */
 	bool _tilt_motors_for_startup{false};

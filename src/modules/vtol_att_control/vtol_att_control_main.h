@@ -86,6 +86,7 @@
 #include "standard.h"
 #include "tailsitter.h"
 #include "tiltrotor.h"
+#include "vtol_type.h"
 
 using namespace time_literals;
 
@@ -109,7 +110,7 @@ public:
 
 	bool init();
 
-	bool is_fixed_wing_requested() { return _transition_command == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW; };
+	bool is_fixed_wing_requested() { return _transition_command == vtol_vehicle_status_s::VTOL_STATE_FW; };
 	int get_transition_command() {return _transition_command;}
 	bool get_immediate_transition() {return _immediate_transition;}
 
@@ -157,10 +158,10 @@ private:
 	uORB::Subscription _vehicle_cmd_sub{ORB_ID(vehicle_command)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 
-	uORB::Publication<actuator_controls_s>		_actuators_0_pub{ORB_ID(actuator_controls_0)};		//input for the mixer (roll,pitch,yaw,thrust)
-	uORB::Publication<actuator_controls_s>		_actuators_1_pub{ORB_ID(actuator_controls_1)};
-	uORB::Publication<vehicle_attitude_setpoint_s>	_v_att_sp_pub{ORB_ID(vehicle_attitude_setpoint)};
-	uORB::Publication<vtol_vehicle_status_s>	_vtol_vehicle_status_pub{ORB_ID(vtol_vehicle_status)};
+	uORB::Publication<actuator_controls_s>			_actuators_0_pub{ORB_ID(actuator_controls_0)};		//input for the mixer (roll,pitch,yaw,thrust)
+	uORB::Publication<actuator_controls_s>			_actuators_1_pub{ORB_ID(actuator_controls_1)};
+	uORB::Publication<vehicle_attitude_setpoint_s>		_v_att_sp_pub{ORB_ID(vehicle_attitude_setpoint)};
+	uORB::Publication<vtol_vehicle_status_s>		_vtol_vehicle_status_pub{ORB_ID(vtol_vehicle_status)};
 	uORB::PublicationMulti<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint0_pub{ORB_ID(vehicle_thrust_setpoint)};
 	uORB::PublicationMulti<vehicle_torque_setpoint_s>	_vehicle_torque_setpoint0_pub{ORB_ID(vehicle_torque_setpoint)};
 	uORB::PublicationMulti<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint1_pub{ORB_ID(vehicle_thrust_setpoint)};
@@ -168,7 +169,7 @@ private:
 
 	orb_advert_t	_mavlink_log_pub{nullptr};	// mavlink log uORB handle
 
-	vehicle_attitude_setpoint_s		_v_att_sp{};			//vehicle attitude setpoint
+	vehicle_attitude_setpoint_s		_v_att_sp{};		//vehicle attitude setpoint
 	vehicle_attitude_setpoint_s 		_fw_virtual_att_sp{};	// virtual fw attitude setpoint
 	vehicle_attitude_setpoint_s 		_mc_virtual_att_sp{};	// virtual mc attitude setpoint
 
@@ -182,10 +183,10 @@ private:
 	vehicle_thrust_setpoint_s		_thrust_setpoint_0{};
 	vehicle_thrust_setpoint_s		_thrust_setpoint_1{};
 
-	airspeed_validated_s 				_airspeed_validated{};			// airspeed
+	airspeed_validated_s 			_airspeed_validated{};	// airspeed
 	position_setpoint_triplet_s		_pos_sp_triplet{};
 	tecs_status_s				_tecs_status{};
-	vehicle_attitude_s			_v_att{};				//vehicle attitude
+	vehicle_attitude_s			_v_att{};		//vehicle attitude
 	vehicle_control_mode_s			_v_control_mode{};	//vehicle control mode
 	vehicle_land_detected_s			_land_detected{};
 	vehicle_local_position_s		_local_pos{};
@@ -197,7 +198,7 @@ private:
 	/* for multicopters it is usual to have a non-zero idle speed of the engines
 	 * for fixed wings we want to have an idle speed of zero since we do not want
 	 * to waste energy when gliding. */
-	int		_transition_command{vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC};
+	int		_transition_command{vtol_vehicle_status_s::VTOL_STATE_MC};
 	bool		_immediate_transition{false};
 
 	VtolType	*_vtol_type{nullptr};	// base class for different vtol types

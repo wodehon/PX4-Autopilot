@@ -51,9 +51,7 @@ using namespace matrix;
 Standard::Standard(VtolAttitudeControl *attc) :
 	VtolType(attc)
 {
-	_vtol_schedule.flight_mode = vtol_mode::MC_MODE;
-	_vtol_schedule.transition_start = 0;
-
+	// TODO: check if necessary to init them here
 	_mc_roll_weight = 1.0f;
 	_mc_pitch_weight = 1.0f;
 	_mc_yaw_weight = 1.0f;
@@ -77,11 +75,11 @@ void Standard::update_vtol_state()
 	 */
 
 	float mc_weight = _mc_roll_weight;
-	float time_since_trans_start = (float)(hrt_absolute_time() - _vtol_schedule.transition_start) * 1e-6f;
+	float time_since_trans_start = (float)(hrt_absolute_time() - _transition_start) * 1e-6f;
 
 	if (_vtol_vehicle_status->vtol_transition_failsafe) {
 		// Failsafe event, engage mc motors immediately
-		_vtol_schedule.flight_mode = vtol_mode::MC_MODE;
+		_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 		_pusher_throttle = 0.0f;
 		_reverse_output = 0.0f;
 
@@ -92,28 +90,34 @@ void Standard::update_vtol_state()
 
 	} else if (!_attc->is_fixed_wing_requested()) {
 
-		// the transition to fw mode switch is off
-		if (_vtol_schedule.flight_mode == vtol_mode::MC_MODE) {
-			// in mc mode
-			_vtol_schedule.flight_mode = vtol_mode::MC_MODE;
+		switch (_vtol_vehicle_status->vtol_state) {
+		case vtol_vehicle_status_s::VTOL_STATE_MC:
+			_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 			mc_weight = 1.0f;
 			_pusher_throttle = 0.0f;
 			_reverse_output = 0.0f;
+			break;
 
-		} else if (_vtol_schedule.flight_mode == vtol_mode::FW_MODE) {
-			// Regular backtransition
-			_vtol_schedule.flight_mode = vtol_mode::TRANSITION_TO_MC;
-			_vtol_schedule.transition_start = hrt_absolute_time();
+		case vtol_vehicle_status_s::VTOL_STATE_FW:
+			_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1;
+			_transition_start = hrt_absolute_time();
 			_reverse_output = _param_vt_b_rev_out.get();
+			break;
 
-		} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_FW) {
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4:
 			// failsafe back to mc mode
-			_vtol_schedule.flight_mode = vtol_mode::MC_MODE;
+			_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 			mc_weight = 1.0f;
 			_pusher_throttle = 0.0f;
 			_reverse_output = 0.0f;
 
-		} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_MC) {
+			break;
+
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2:
 			// speed exit condition: use ground if valid, otherwise airspeed
 			bool exit_backtransition_speed_condition = false;
 
@@ -129,49 +133,59 @@ void Standard::update_vtol_state()
 			const bool exit_backtransition_time_condition = time_since_trans_start > _param_vt_b_trans_dur.get();
 
 			if (can_transition_on_ground() || exit_backtransition_speed_condition || exit_backtransition_time_condition) {
-				_vtol_schedule.flight_mode = vtol_mode::MC_MODE;
+				_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_MC;
 			}
+
+			break;
 		}
 
 	} else {
-		// the transition to fw mode switch is on
-		if (_vtol_schedule.flight_mode == vtol_mode::MC_MODE || _vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_MC) {
-			// start transition to fw mode
-			/* NOTE: The failsafe transition to fixed-wing was removed because it can result in an
-			 * unsafe flying state. */
-			_vtol_schedule.flight_mode = vtol_mode::TRANSITION_TO_FW;
-			_vtol_schedule.transition_start = hrt_absolute_time();
+		switch (_vtol_vehicle_status->vtol_state) {
+		case vtol_vehicle_status_s::VTOL_STATE_MC:
+			_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1;
+			_transition_start = hrt_absolute_time();
+			break;
 
-		} else if (_vtol_schedule.flight_mode == vtol_mode::FW_MODE) {
-			// in fw mode
-			_vtol_schedule.flight_mode = vtol_mode::FW_MODE;
-			mc_weight = 0.0f;
+		case vtol_vehicle_status_s::VTOL_STATE_FW:
+			break;
 
-		} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_FW) {
-			// continue the transition to fw mode while monitoring airspeed for a final switch to fw mode
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4: {
+				// continue the transition to fw mode while monitoring airspeed for a final switch to fw mode
+				const bool airspeed_triggers_transition = PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)
+						&& !_param_fw_arsp_mode.get();
+				const bool minimum_trans_time_elapsed = time_since_trans_start > _param_vt_trans_min_tm.get();
 
-			const bool airspeed_triggers_transition = PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)
-					&& !_param_fw_arsp_mode.get();
-			const bool minimum_trans_time_elapsed = time_since_trans_start > _param_vt_trans_min_tm.get();
+				bool transition_to_fw = false;
 
-			bool transition_to_fw = false;
+				if (minimum_trans_time_elapsed) {
+					if (airspeed_triggers_transition) {
+						transition_to_fw = _airspeed_validated->calibrated_airspeed_m_s >= _param_vt_arsp_trans.get();
 
-			if (minimum_trans_time_elapsed) {
-				if (airspeed_triggers_transition) {
-					transition_to_fw = _airspeed_validated->calibrated_airspeed_m_s >= _param_vt_arsp_trans.get();
-
-				} else {
-					transition_to_fw = true;
+					} else {
+						transition_to_fw = true;
+					}
 				}
+
+				transition_to_fw |= can_transition_on_ground();
+
+				if (transition_to_fw) {
+					_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_FW;
+
+					// don't set pusher throttle here as it's being ramped up elsewhere
+					_trans_finished_ts = hrt_absolute_time();
+				}
+
+				break;
 			}
 
-			transition_to_fw |= can_transition_on_ground();
-
-			if (transition_to_fw) {
-				_vtol_schedule.flight_mode = vtol_mode::FW_MODE;
-
-				// don't set pusher throttle here as it's being ramped up elsewhere
-				_trans_finished_ts = hrt_absolute_time();
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+		case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2: {
+				_vtol_vehicle_status->vtol_state = vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1;
+				_transition_start = hrt_absolute_time();
+				break;
 			}
 		}
 	}
@@ -180,31 +194,12 @@ void Standard::update_vtol_state()
 	_mc_pitch_weight = mc_weight;
 	_mc_yaw_weight = mc_weight;
 	_mc_throttle_weight = mc_weight;
-
-	// map specific control phases to simple control modes
-	switch (_vtol_schedule.flight_mode) {
-	case vtol_mode::MC_MODE:
-		_vtol_mode = mode::ROTARY_WING;
-		break;
-
-	case vtol_mode::FW_MODE:
-		_vtol_mode = mode::FIXED_WING;
-		break;
-
-	case vtol_mode::TRANSITION_TO_FW:
-		_vtol_mode = mode::TRANSITION_TO_FW;
-		break;
-
-	case vtol_mode::TRANSITION_TO_MC:
-		_vtol_mode = mode::TRANSITION_TO_MC;
-		break;
-	}
 }
 
 void Standard::update_transition_state()
 {
 	float mc_weight = 1.0f;
-	float time_since_trans_start = (float)(hrt_absolute_time() - _vtol_schedule.transition_start) * 1e-6f;
+	float time_since_trans_start = (float)(hrt_absolute_time() - _transition_start) * 1e-6f;
 
 	VtolType::update_transition_state();
 
@@ -219,71 +214,86 @@ void Standard::update_transition_state()
 		_v_att_sp->thrust_body[2] = -_fw_virtual_att_sp->thrust_body[0];
 	}
 
-	if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_FW) {
-		if (_param_vt_psher_rmp_dt.get() <= 0.0f) {
-			// just set the final target throttle value
-			_pusher_throttle = _param_vt_f_trans_thr.get();
+	switch (_vtol_vehicle_status->vtol_state) {
+	case vtol_vehicle_status_s::VTOL_STATE_MC:
+		break;
 
-		} else if (_pusher_throttle <= _param_vt_f_trans_thr.get()) {
-			// ramp up throttle to the target throttle value
-			_pusher_throttle = _param_vt_f_trans_thr.get() * time_since_trans_start / _param_vt_psher_rmp_dt.get();
+	case vtol_vehicle_status_s::VTOL_STATE_FW:
+		break;
+
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4: {
+			if (_param_vt_psher_rmp_dt.get() <= 0.0f) {
+				// just set the final target throttle value
+				_pusher_throttle = _param_vt_f_trans_thr.get();
+
+			} else if (_pusher_throttle <= _param_vt_f_trans_thr.get()) {
+				// ramp up throttle to the target throttle value
+				_pusher_throttle = _param_vt_f_trans_thr.get() * time_since_trans_start / _param_vt_psher_rmp_dt.get();
+			}
+
+			_airspeed_trans_blend_margin = _param_vt_arsp_trans.get() - _param_vt_arsp_blend.get();
+
+			// do blending of mc and fw controls if a blending airspeed has been provided and the minimum transition time has passed
+			if (_airspeed_trans_blend_margin > 0.0f &&
+			    PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s) &&
+			    _airspeed_validated->calibrated_airspeed_m_s > 0.0f &&
+			    _airspeed_validated->calibrated_airspeed_m_s >= _param_vt_arsp_blend.get() &&
+			    time_since_trans_start > _param_vt_trans_min_tm.get()) {
+
+				mc_weight = 1.0f - fabsf(_airspeed_validated->calibrated_airspeed_m_s - _param_vt_arsp_blend.get()) /
+					    _airspeed_trans_blend_margin;
+				// time based blending when no airspeed sensor is set
+
+			} else if (_param_fw_arsp_mode.get() || !PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)) {
+				mc_weight = 1.0f - time_since_trans_start / _param_vt_trans_min_tm.get();
+				mc_weight = math::constrain(2.0f * mc_weight, 0.0f, 1.0f);
+
+			}
+
+			// ramp up FW_PSP_OFF
+			_v_att_sp->pitch_body = math::radians(_param_fw_psp_off.get()) * (1.0f - mc_weight);
+
+			const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
+			q_sp.copyTo(_v_att_sp->q_d);
+
+			break;
 		}
 
-		_airspeed_trans_blend_margin = _param_vt_arsp_trans.get() - _param_vt_arsp_blend.get();
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2: {
+			if (_v_control_mode->flag_control_climb_rate_enabled) {
+				// control backtransition deceleration using pitch.
+				_v_att_sp->pitch_body = update_and_get_backtransition_pitch_sp();
+			}
 
-		// do blending of mc and fw controls if a blending airspeed has been provided and the minimum transition time has passed
-		if (_airspeed_trans_blend_margin > 0.0f &&
-		    PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s) &&
-		    _airspeed_validated->calibrated_airspeed_m_s > 0.0f &&
-		    _airspeed_validated->calibrated_airspeed_m_s >= _param_vt_arsp_blend.get() &&
-		    time_since_trans_start > _param_vt_trans_min_tm.get()) {
+			const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
+			q_sp.copyTo(_v_att_sp->q_d);
 
-			mc_weight = 1.0f - fabsf(_airspeed_validated->calibrated_airspeed_m_s - _param_vt_arsp_blend.get()) /
-				    _airspeed_trans_blend_margin;
-			// time based blending when no airspeed sensor is set
+			_pusher_throttle = 0.0f;
 
-		} else if (_param_fw_arsp_mode.get() || !PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)) {
-			mc_weight = 1.0f - time_since_trans_start / _param_vt_trans_min_tm.get();
-			mc_weight = math::constrain(2.0f * mc_weight, 0.0f, 1.0f);
+			if (time_since_trans_start >= _param_vt_b_rev_del.get()) {
+				// Handle throttle reversal for active breaking
+				float thrscale = (time_since_trans_start - _param_vt_b_rev_del.get()) / (_param_vt_psher_rmp_dt.get());
+				thrscale = math::constrain(thrscale, 0.0f, 1.0f);
+				_pusher_throttle = thrscale * _param_vt_b_trans_thr.get();
+			}
 
-		}
+			// continually increase mc attitude control as we transition back to mc vtol_state
+			if (_param_vt_b_trans_ramp.get() > FLT_EPSILON) {
+				mc_weight = time_since_trans_start / _param_vt_b_trans_ramp.get();
+			}
 
-		// ramp up FW_PSP_OFF
-		_v_att_sp->pitch_body = math::radians(_param_fw_psp_off.get()) * (1.0f - mc_weight);
+			set_all_motor_state(motor_state::ENABLED);
 
-		const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
-		q_sp.copyTo(_v_att_sp->q_d);
+			// set idle speed for MC actuators
+			if (!_flag_idle_mc) {
+				_flag_idle_mc = set_idle_mc();
+			}
 
-
-	} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_MC) {
-
-		if (_v_control_mode->flag_control_climb_rate_enabled) {
-			// control backtransition deceleration using pitch.
-			_v_att_sp->pitch_body = update_and_get_backtransition_pitch_sp();
-		}
-
-		const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
-		q_sp.copyTo(_v_att_sp->q_d);
-
-		_pusher_throttle = 0.0f;
-
-		if (time_since_trans_start >= _param_vt_b_rev_del.get()) {
-			// Handle throttle reversal for active breaking
-			float thrscale = (time_since_trans_start - _param_vt_b_rev_del.get()) / (_param_vt_psher_rmp_dt.get());
-			thrscale = math::constrain(thrscale, 0.0f, 1.0f);
-			_pusher_throttle = thrscale * _param_vt_b_trans_thr.get();
-		}
-
-		// continually increase mc attitude control as we transition back to mc mode
-		if (_param_vt_b_trans_ramp.get() > FLT_EPSILON) {
-			mc_weight = time_since_trans_start / _param_vt_b_trans_ramp.get();
-		}
-
-		set_all_motor_state(motor_state::ENABLED);
-
-		// set idle speed for MC actuators
-		if (!_flag_idle_mc) {
-			_flag_idle_mc = set_idle_mc();
+			break;
 		}
 	}
 
@@ -321,8 +331,8 @@ void Standard::fill_actuator_outputs()
 
 	const bool elevon_lock = (_param_vt_elev_mc_lock.get()  == 1);
 
-	switch (_vtol_schedule.flight_mode) {
-	case vtol_mode::MC_MODE:
+	switch (_vtol_vehicle_status->vtol_state) {
+	case vtol_vehicle_status_s::VTOL_STATE_MC:
 
 		// MC out = MC in
 		mc_out[actuator_controls_s::INDEX_ROLL]         = mc_in[actuator_controls_s::INDEX_ROLL];
@@ -341,10 +351,14 @@ void Standard::fill_actuator_outputs()
 
 		break;
 
-	case vtol_mode::TRANSITION_TO_FW:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P2:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P3:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_FW_P4:
 
-	// FALLTHROUGH
-	case vtol_mode::TRANSITION_TO_MC:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P1:
+	case vtol_vehicle_status_s::VTOL_STATE_TRANSITION_TO_MC_P2:
+
 		// MC out = MC in (weighted)
 		mc_out[actuator_controls_s::INDEX_ROLL]         = mc_in[actuator_controls_s::INDEX_ROLL]     * _mc_roll_weight;
 		mc_out[actuator_controls_s::INDEX_PITCH]        = mc_in[actuator_controls_s::INDEX_PITCH]    * _mc_pitch_weight;
@@ -362,7 +376,7 @@ void Standard::fill_actuator_outputs()
 
 		break;
 
-	case vtol_mode::FW_MODE:
+	case vtol_vehicle_status_s::VTOL_STATE_FW:
 		// MC out = 0
 		mc_out[actuator_controls_s::INDEX_ROLL]         = 0;
 		mc_out[actuator_controls_s::INDEX_PITCH]        = 0;

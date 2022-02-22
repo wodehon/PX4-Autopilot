@@ -524,7 +524,7 @@ void RTL::set_rtl_item()
 		}
 
 	case RTL_STATE_TRANSITION_TO_MC: {
-			set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC);
+			set_vtol_transition_item(&_mission_item, vtol_vehicle_status_s::VTOL_STATE_MC);
 			break;
 		}
 

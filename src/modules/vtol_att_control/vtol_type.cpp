@@ -53,8 +53,7 @@ using namespace matrix;
 
 VtolType::VtolType(VtolAttitudeControl *att_controller) :
 	ModuleParams(nullptr),
-	_attc(att_controller),
-	_vtol_mode(mode::ROTARY_WING)
+	_attc(att_controller)
 {
 	_v_att = _attc->get_att();
 	_v_att_sp = _attc->get_att_sp();

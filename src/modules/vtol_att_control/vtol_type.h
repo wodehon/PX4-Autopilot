@@ -48,14 +48,6 @@
 #include <drivers/drv_pwm_output.h>
 #include <px4_platform_common/module_params.h>
 
-// Has to match 1:1 msg/vtol_vehicle_status.msg
-enum class mode {
-	TRANSITION_TO_FW = 1,
-	TRANSITION_TO_MC = 2,
-	ROTARY_WING = 3,
-	FIXED_WING = 4
-};
-
 enum class vtol_type {
 	TAILSITTER = 0,
 	TILTROTOR,
@@ -151,14 +143,11 @@ public:
 
 	virtual void blendThrottleAfterFrontTransition(float scale) {};
 
-	mode get_mode() {return _vtol_mode;}
-
 	bool was_in_trans_mode() {return _flag_was_in_trans_mode;}
 
 	virtual void parameters_update() = 0;
 
 	VtolAttitudeControl *_attc;
-	mode _vtol_mode;
 
 	static constexpr const int num_outputs_max = 8;
 
@@ -196,6 +185,7 @@ public:
 
 	bool _flag_was_in_trans_mode = false;	// true if mode has just switched to transition
 
+	hrt_abstime _transition_start = 0;	/**< absoulte time at which transition (use for noth front and back) started */
 	hrt_abstime _trans_finished_ts = 0;
 
 	bool _tecs_running = false;
