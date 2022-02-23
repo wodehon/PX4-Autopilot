@@ -43,6 +43,16 @@
 #include <math.h>
 #include <fcntl.h>
 
+FlightTaskAutoPrecisionLanding::FlightTaskAutoPrecisionLanding()
+{
+	_landing_target_estimator.Start();
+}
+
+FlightTaskAutoPrecisionLanding::~FlightTaskAutoPrecisionLanding()
+{
+	_landing_target_estimator.Stop();
+}
+
 bool FlightTaskAutoPrecisionLanding::activate(const vehicle_local_position_setpoint_s &last_setpoint)
 {
 	bool ret = FlightTask::activate(last_setpoint);
