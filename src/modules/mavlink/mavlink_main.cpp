@@ -195,6 +195,7 @@ Mavlink::mavlink_update_parameters()
 	if (_param_mav_type.get() < 0 || _param_mav_type.get() >= MAV_TYPE_ENUM_END) {
 		_param_mav_type.set(0);
 		_param_mav_type.commit_no_notification();
+		mavlink_log_critical(&_mavlink_log_pub, "MAV_TYPE is unknown. Check selected airframe");
 		PX4_ERR("MAV_TYPE parameter invalid, resetting to 0.");
 	}
 }

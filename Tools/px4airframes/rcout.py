@@ -80,6 +80,7 @@ class RCOutput():
             result += "else\n"
             result += "\techo \"ERROR  [init] No file matches SYS_AUTOSTART value found in : /etc/init.d/airframes\"\n"
             # Reset the configuration
+            result += "\tparam set MAV_TYPE -1\n"
             result += "\tparam set SYS_AUTOSTART 0\n"
             result += "\ttone_alarm ${TUNE_ERR}\n"
         result += "fi\n"
