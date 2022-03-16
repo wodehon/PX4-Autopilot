@@ -136,6 +136,8 @@ bool VtolType::init()
 		}
 	}
 
+	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //min 1s from no spoiler deflection to full deflection
+
 	return true;
 
 }
@@ -157,6 +159,15 @@ void VtolType::update_mc_state()
 	_mc_pitch_weight = 1.0f;
 	_mc_yaw_weight = 1.0f;
 	_mc_throttle_weight = 1.0f;
+
+	float spoiler_setpoint_hover = 0.f;
+
+	if (_attc->get_pos_sp_triplet()->current.valid
+	    && _attc->get_pos_sp_triplet()->current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+		spoiler_setpoint_hover = _params->vt_spoiler_mc_ld;
+	}
+
+	_spoiler_setpoint_with_slewrate.update(spoiler_setpoint_hover, _dt);
 }
 
 void VtolType::update_fw_state()
@@ -205,6 +216,8 @@ void VtolType::update_fw_state()
 	}
 
 	check_quadchute_condition();
+
+	_spoiler_setpoint_with_slewrate.update(_actuators_fw_in->control[actuator_controls_s::INDEX_SPOILERS], _dt);
 }
 
 void VtolType::update_transition_state()
@@ -214,8 +227,6 @@ void VtolType::update_transition_state()
 	_transition_dt = math::constrain(_transition_dt, 0.0001f, 0.02f);
 	_last_loop_ts = t_now;
 	_throttle_blend_start_ts = t_now;
-
-
 
 	check_quadchute_condition();
 }
