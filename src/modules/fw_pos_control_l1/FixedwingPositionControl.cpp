@@ -1264,12 +1264,10 @@ FixedwingPositionControl::control_auto_loiter(const float dt, const Vector2d &cu
 		const Vector2f &ground_speed, const position_setpoint_s &pos_sp_prev, const position_setpoint_s &pos_sp_curr,
 		const position_setpoint_s &pos_sp_next)
 {
-	Vector2d curr_wp{0, 0};
 	Vector2d prev_wp{0, 0};
 
 	/* current waypoint (the one currently heading for) */
-	curr_wp = Vector2d(pos_sp_curr.lat, pos_sp_curr.lon);
-	Vector2f curr_wp_local = _global_local_proj_ref.project(curr_wp(0), curr_wp(1));
+	Vector2f curr_wp_local = _global_local_proj_ref.project(pos_sp_curr.lat, pos_sp_curr.lon);
 	Vector2f curr_pos_local{_local_pos.x, _local_pos.y};
 
 	if (pos_sp_prev.valid) {
@@ -2139,11 +2137,10 @@ FixedwingPositionControl::control_manual_position(const hrt_abstime &now, const 
 			}
 
 			Vector2d prev_wp{_hdg_hold_prev_wp.lat, _hdg_hold_prev_wp.lon};
-			Vector2d curr_wp{_hdg_hold_curr_wp.lat, _hdg_hold_curr_wp.lon};
 
 			/* populate l1 control setpoint */
 			Vector2f curr_pos_local{_local_pos.x, _local_pos.y};
-			Vector2f curr_wp_local = _global_local_proj_ref.project(curr_wp(0), curr_wp(1));
+			Vector2f curr_wp_local = _global_local_proj_ref.project(_hdg_hold_curr_wp.lat, _hdg_hold_curr_wp.lon);
 			Vector2f prev_wp_local = _global_local_proj_ref.project(prev_wp(0), prev_wp(1));
 			_l1_control.navigate_waypoints(prev_wp_local, curr_wp_local, curr_pos_local, ground_speed);
 
