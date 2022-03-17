@@ -84,7 +84,7 @@ ECL_L1_Pos_Controller::navigate_waypoints(const Vector2f &vector_A, const Vector
 	/* get the direction between the last (visited) and next waypoint */
 	Vector2f vector_B_to_P = vector_B - vector_curr_position;
 	Vector2f vector_B_to_P_unit = vector_B_to_P.normalized();
-	_target_bearing = wrap_pi(atan2f(vector_B_to_P_unit(1), vector_B_to_P_unit(0)));
+	_target_bearing = atan2f(vector_B_to_P_unit(1), vector_B_to_P_unit(0));
 
 	/* enforce a minimum ground speed of 0.1 m/s to avoid singularities */
 	float ground_speed = math::max(ground_speed_vector.length(), 0.1f);
@@ -245,7 +245,7 @@ ECL_L1_Pos_Controller::navigate_loiter(const Vector2f &vector_A, const Vector2f 
 	}
 
 	/* update bearing to next waypoint */
-	_target_bearing = wrap_pi(atan2f(vector_A_to_airplane_unit(1), vector_A_to_airplane_unit(0)));
+	_target_bearing = atan2f(vector_A_to_airplane_unit(1), vector_A_to_airplane_unit(0));
 
 	/* calculate eta angle towards the loiter center */
 

@@ -946,7 +946,7 @@ FixedwingPositionControl::control_auto(const hrt_abstime &now, const Vector2f &c
 		} else if (!PX4_ISFINITE(curr_wp(0)) || !PX4_ISFINITE(curr_wp(1))) {
 			//Offboard velocity control
 			Vector2f target_velocity{path_sp.vx, path_sp.vy};
-			_target_bearing = wrap_pi(atan2f(target_velocity(1), target_velocity(0)));
+			_target_bearing = atan2f(target_velocity(1), target_velocity(0));
 			_l1_control.navigate_heading(_target_bearing, _yaw, ground_speed);
 
 		} else {
