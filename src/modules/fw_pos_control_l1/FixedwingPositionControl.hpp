@@ -347,7 +347,7 @@ private:
 	uint8_t		handle_setpoint_type(const uint8_t setpoint_type, const position_setpoint_s &pos_sp_curr);
 
 	/**
-	 * @brief Generate path tracking setpoints from waypoints
+	 * @brief Generate path following setpoints from waypoints
 	 *
 	 * @param now current time
 	 * @param curr_pos vehicle current position
