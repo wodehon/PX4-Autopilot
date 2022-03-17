@@ -588,9 +588,9 @@ void NPFG::navigatePathTangent(const matrix::Vector2f &vehicle_pos, const matrix
 		signed_track_error_ = error_vector.norm();
 		guideToPoint(ground_vel, wind_vel, unit_path_tangent_, signed_track_error_);
 
-	} else if (!PX4_ISFINITE(error_vector(0)) || !PX4_ISFINITE(error_vector(1))) {
+	} else if (!PX4_ISFINITE(position_setpoint(0)) || !PX4_ISFINITE(position_setpoint(1))) {
 		//No valid position setpoint, velocity reference
-		float bearing = matrix::wrap_pi(atan2f(tangent_setpoint(1), tangent_setpoint(0)));
+		const float bearing = atan2f(tangent_setpoint(1), tangent_setpoint(0));
 
 		unit_path_tangent_ = Vector2f{cosf(bearing), sinf(bearing)};
 
