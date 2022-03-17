@@ -10,7 +10,7 @@ float32 z		# in meters NED
 float32 vx		# in meters/sec
 float32 vy		# in meters/sec
 float32 vz		# in meters/sec
-float32 airspeed	# air relative setpoint
+float32 true_airspeed	# true air relative setpoint in meters/sec
 float32 curvature	# in meters/sec^2
 
 # TOPICS vehicle_local_path_setpoint

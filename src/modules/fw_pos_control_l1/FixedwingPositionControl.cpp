@@ -918,7 +918,7 @@ FixedwingPositionControl::control_auto(const hrt_abstime &now, const Vector2f &c
 	_att_sp.pitch_reset_integral = false;
 	_att_sp.yaw_reset_integral = false;
 
-	float target_airspeed = path_sp.airspeed;
+	float target_airspeed = path_sp.true_airspeed;
 
 	if (_param_fw_use_npfg.get()) {
 		Vector2f path_point_sp(path_sp.x, path_sp.y);
@@ -1253,7 +1253,7 @@ FixedwingPositionControl::control_auto_position(const float dt, const Vector2f &
 	setpoint.vx = path_tangent(0);
 	setpoint.vy = path_tangent(1);
 	setpoint.vz = NAN;
-	setpoint.airspeed = target_airspeed;
+	setpoint.true_airspeed = target_airspeed;
 	setpoint.curvature = 0.0f;
 
 	return setpoint;
@@ -1376,7 +1376,7 @@ FixedwingPositionControl::control_auto_loiter(const float dt, const Vector2d &cu
 	setpoint.vy = unit_path_tangent(1);
 	setpoint.vz = NAN;
 	curr_wp_local.copyTo(setpoint.prev_wp);
-	setpoint.airspeed = target_airspeed;
+	setpoint.true_airspeed = target_airspeed;
 	setpoint.curvature = PX4_ISFINITE(loiter_radius) ? float(loiter_direction) / loiter_radius : 0.0f;
 	return setpoint;
 }
@@ -2331,7 +2331,7 @@ FixedwingPositionControl::Run()
 				path_sp.y = NAN;
 				path_sp.z = NAN;
 				path_sp.curvature = NAN;
-				path_sp.airspeed = _param_fw_airspd_trim.get();
+				path_sp.true_airspeed = _param_fw_airspd_trim.get();
 
 				if (PX4_ISFINITE(trajectory_setpoint.x) && PX4_ISFINITE(trajectory_setpoint.y) && PX4_ISFINITE(trajectory_setpoint.z)) {
 					valid_offboard_path = true;
@@ -2347,8 +2347,8 @@ FixedwingPositionControl::Run()
 					path_sp.vx = velocity_setpoint(0);
 					path_sp.vy = velocity_setpoint(1);
 					path_sp.vz = velocity_setpoint(2);
-					path_sp.airspeed = (velocity_setpoint.norm() < _param_fw_airspd_min.get()) ? _param_fw_airspd_trim.get() :
-							   velocity_setpoint.norm();
+					path_sp.true_airspeed = (velocity_setpoint.norm() < _param_fw_airspd_min.get()) ? _param_fw_airspd_trim.get() :
+								velocity_setpoint.norm();
 
 					if (PX4_ISFINITE(trajectory_setpoint.acceleration[0]) && PX4_ISFINITE(trajectory_setpoint.acceleration[1])
 					    && PX4_ISFINITE(trajectory_setpoint.acceleration[2])) {
