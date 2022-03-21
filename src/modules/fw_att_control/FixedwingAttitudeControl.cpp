@@ -67,6 +67,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl(bool vtol) :
 	_yaw_ctrl.set_max_rate(radians(_param_fw_acro_z_max.get()));
 
 	_rate_ctrl_status_pub.advertise();
+	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //min 1s from no spoiler deflection to full deflection
 }
 
 FixedwingAttitudeControl::~FixedwingAttitudeControl()
@@ -382,11 +383,13 @@ void FixedwingAttitudeControl::Run()
 
 		/* if we are in rotary wing mode, do nothing */
 		if (_vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING && !_vehicle_status.is_vtol) {
+			_spoiler_setpoint_with_slewrate.setForcedValue(0.f);
 			perf_end(_loop_perf);
 			return;
 		}
 
 		control_flaps(dt);
+		control_spoilers(dt);
 
 		/* decide if in stabilized or full manual control */
 		if (_vcontrol_mode.flag_control_rates_enabled) {
@@ -500,6 +503,9 @@ void FixedwingAttitudeControl::Run()
 			/* add trim increment if flaps are deployed  */
 			trim_roll += _flaps_applied * _param_fw_dtrim_r_flps.get();
 			trim_pitch += _flaps_applied * _param_fw_dtrim_p_flps.get();
+
+			// add trim increment from spoilers (only pitch)
+			trim_pitch += _spoiler_setpoint_with_slewrate.getState() * _param_fw_dtrim_p_spoil.get();
 
 			/* Run attitude controllers */
 			if (_vcontrol_mode.flag_control_attitude_enabled) {
@@ -646,10 +652,10 @@ void FixedwingAttitudeControl::Run()
 				* constrain(_actuators.control[actuator_controls_s::INDEX_ROLL], -1.0f, 1.0f);
 
 		_actuators.control[actuator_controls_s::INDEX_FLAPS] = _flaps_applied;
-		_actuators.control[5] = _manual_control_setpoint.aux1;
-		_actuators.control[actuator_controls_s::INDEX_AIRBRAKES] = _flaperons_applied;
+		_actuators.control[actuator_controls_s::INDEX_SPOILERS] = _spoiler_setpoint_with_slewrate.getState();
+		_actuators.control[actuator_controls_s::INDEX_AIRBRAKES] = 0.f;
 		// FIXME: this should use _vcontrol_mode.landing_gear_pos in the future
-		_actuators.control[7] = _manual_control_setpoint.aux3;
+		_actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _manual_control_setpoint.aux3;
 
 		/* lazily publish the setpoint only once available */
 		_actuators.timestamp = hrt_absolute_time();
@@ -732,34 +738,29 @@ void FixedwingAttitudeControl::control_flaps(const float dt)
 	} else {
 		_flaps_applied = flap_control;
 	}
+}
 
-	/* default flaperon to center */
-	float flaperon_control = 0.0f;
+void FixedwingAttitudeControl::control_spoilers(const float dt)
+{
+	float spoiler_control = 0.f;
 
-	/* map flaperons by default to manual if valid */
-	if (PX4_ISFINITE(_manual_control_setpoint.aux2) && _vcontrol_mode.flag_control_manual_enabled
-	    && fabsf(_param_fw_flaperon_scl.get()) > 0.01f) {
+	if (_vcontrol_mode.flag_control_auto_enabled) {
+		switch (_att_sp.apply_spoilers) {
+		case vehicle_attitude_setpoint_s::SPOILERS_OFF:
+			spoiler_control = 0.f;
+			break;
 
-		flaperon_control = 0.5f * (_manual_control_setpoint.aux2 + 1.0f) * _param_fw_flaperon_scl.get();
+		case vehicle_attitude_setpoint_s::SPOILERS_LAND:
+			spoiler_control = _param_fw_spoilers_lnd.get();
+			break;
 
-	} else if (_vcontrol_mode.flag_control_auto_enabled
-		   && fabsf(_param_fw_flaperon_scl.get()) > 0.01f) {
-
-		if (_att_sp.apply_flaps == vehicle_attitude_setpoint_s::FLAPS_LAND) {
-			flaperon_control = _param_fw_flaperon_scl.get();
-
-		} else {
-			flaperon_control = 0.0f;
+		case vehicle_attitude_setpoint_s::SPOILERS_DESCEND:
+			spoiler_control = _param_fw_spoilers_desc.get();
+			break;
 		}
 	}
 
-	// move the actual control value continuous with time, full flap travel in 1sec
-	if (fabsf(_flaperons_applied - flaperon_control) > 0.01f) {
-		_flaperons_applied += (_flaperons_applied - flaperon_control) < 0 ? dt : -dt;
-
-	} else {
-		_flaperons_applied = flaperon_control;
-	}
+	_spoiler_setpoint_with_slewrate.update(spoiler_control, dt);
 }
 
 void FixedwingAttitudeControl::updateActuatorControlsStatus(float dt)
