@@ -531,7 +531,9 @@ void Tiltrotor::fill_actuator_outputs()
 	}
 
 	// Fixed wing output
-	fw_out[4] = _tilt_control;
+
+	// use airbrake controls channel for combined tilt (this prevents the use of airbrakes on tiltrotors)
+	fw_out[actuator_controls_s::INDEX_AIRBRAKES] = _tilt_control;
 
 	if (_params->elevons_mc_lock && _vtol_schedule.flight_mode == vtol_mode::MC_MODE) {
 		fw_out[actuator_controls_s::INDEX_ROLL]  	= 0;
@@ -545,12 +547,11 @@ void Tiltrotor::fill_actuator_outputs()
 		_torque_setpoint_1->xyz[0] = fw_in[actuator_controls_s::INDEX_ROLL];
 		_torque_setpoint_1->xyz[1] = fw_in[actuator_controls_s::INDEX_PITCH];
 		_torque_setpoint_1->xyz[2] = fw_in[actuator_controls_s::INDEX_YAW];
-
 	}
 
-	// fw_out[actuator_controls_s::INDEX_FLAPS]        = 0; // this index is used for tilt
+	fw_out[actuator_controls_s::INDEX_FLAPS]        = 0;
 	fw_out[actuator_controls_s::INDEX_SPOILERS]     = _spoiler_setpoint_with_slewrate.getState();
-	fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = 0;
+	// fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = 0; // this index is used for tilt
 
 	_actuators_out_0->timestamp_sample = _actuators_mc_in->timestamp_sample;
 	_actuators_out_1->timestamp_sample = _actuators_fw_in->timestamp_sample;
