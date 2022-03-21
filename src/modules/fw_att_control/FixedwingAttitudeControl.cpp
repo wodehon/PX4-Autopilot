@@ -744,7 +744,21 @@ void FixedwingAttitudeControl::control_spoilers(const float dt)
 {
 	float spoiler_control = 0.f;
 
-	if (_vcontrol_mode.flag_control_auto_enabled) {
+	if (_vcontrol_mode.flag_control_manual_enabled) {
+		switch (_param_fw_spoilers_man.get()) {
+		case 0:
+			break;
+
+		case 1:
+			spoiler_control = PX4_ISFINITE(_manual_control_setpoint.flaps) ? _manual_control_setpoint.flaps : 0.f;
+			break;
+
+		case 2:
+			spoiler_control = PX4_ISFINITE(_manual_control_setpoint.aux1) ? _manual_control_setpoint.aux1 : 0.f;
+			break;
+		}
+
+	} else if (_vcontrol_mode.flag_control_auto_enabled) {
 		switch (_att_sp.apply_spoilers) {
 		case vehicle_attitude_setpoint_s::SPOILERS_OFF:
 			spoiler_control = 0.f;
