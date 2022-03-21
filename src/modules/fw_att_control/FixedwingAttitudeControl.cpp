@@ -68,6 +68,7 @@ FixedwingAttitudeControl::FixedwingAttitudeControl(bool vtol) :
 
 	_rate_ctrl_status_pub.advertise();
 	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //min 1s from no spoiler deflection to full deflection
+	_flaps_setpoint_with_slewrate.setSlewRate(1.f);
 }
 
 FixedwingAttitudeControl::~FixedwingAttitudeControl()
@@ -384,6 +385,7 @@ void FixedwingAttitudeControl::Run()
 		/* if we are in rotary wing mode, do nothing */
 		if (_vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING && !_vehicle_status.is_vtol) {
 			_spoiler_setpoint_with_slewrate.setForcedValue(0.f);
+			_flaps_setpoint_with_slewrate.setForcedValue(0.f);
 			perf_end(_loop_perf);
 			return;
 		}
@@ -501,8 +503,8 @@ void FixedwingAttitudeControl::Run()
 			}
 
 			/* add trim increment if flaps are deployed  */
-			trim_roll += _flaps_applied * _param_fw_dtrim_r_flps.get();
-			trim_pitch += _flaps_applied * _param_fw_dtrim_p_flps.get();
+			trim_roll += _flaps_setpoint_with_slewrate.getState() * _param_fw_dtrim_r_flps.get();
+			trim_pitch += _flaps_setpoint_with_slewrate.getState() * _param_fw_dtrim_p_flps.get();
 
 			// add trim increment from spoilers (only pitch)
 			trim_pitch += _spoiler_setpoint_with_slewrate.getState() * _param_fw_dtrim_p_spoil.get();
@@ -651,7 +653,7 @@ void FixedwingAttitudeControl::Run()
 		_actuators.control[actuator_controls_s::INDEX_YAW] += _param_fw_rll_to_yaw_ff.get()
 				* constrain(_actuators.control[actuator_controls_s::INDEX_ROLL], -1.0f, 1.0f);
 
-		_actuators.control[actuator_controls_s::INDEX_FLAPS] = _flaps_applied;
+		_actuators.control[actuator_controls_s::INDEX_FLAPS] = _flaps_setpoint_with_slewrate.getState();
 		_actuators.control[actuator_controls_s::INDEX_SPOILERS] = _spoiler_setpoint_with_slewrate.getState();
 		_actuators.control[actuator_controls_s::INDEX_AIRBRAKES] = 0.f;
 		// FIXME: this should use _vcontrol_mode.landing_gear_pos in the future
@@ -732,12 +734,7 @@ void FixedwingAttitudeControl::control_flaps(const float dt)
 	}
 
 	// move the actual control value continuous with time, full flap travel in 1sec
-	if (fabsf(_flaps_applied - flap_control) > 0.01f) {
-		_flaps_applied += (_flaps_applied - flap_control) < 0 ? dt : -dt;
-
-	} else {
-		_flaps_applied = flap_control;
-	}
+	_flaps_setpoint_with_slewrate.update(flap_control, dt);
 }
 
 void FixedwingAttitudeControl::control_spoilers(const float dt)
