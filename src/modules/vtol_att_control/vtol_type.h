@@ -83,6 +83,8 @@ struct Params {
 	float mpc_land_alt1;
 	float mpc_land_alt2;
 	float vt_spoiler_mc_ld;
+	float vt_flaps_bt;
+	float vt_spoilers_bt;
 };
 
 // Has to match 1:1 msg/vtol_vehicle_status.msg
@@ -305,6 +307,7 @@ protected:
 	bool override_controls_for_test_mode();
 
 	SlewRate<float> _spoiler_setpoint_with_slewrate;
+	SlewRate<float> _flaps_setpoint_with_slewrate;
 
 	float _dt{0.0025f};
 

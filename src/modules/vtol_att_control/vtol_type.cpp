@@ -136,7 +136,8 @@ bool VtolType::init()
 		}
 	}
 
-	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //min 1s from no spoiler deflection to full deflection
+	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //at least 1s from no spoiler deflection to full deflection
+	_flaps_setpoint_with_slewrate.setSlewRate(1.f); //at least 1s from no flaps deflection to full deflection
 
 	return true;
 
@@ -168,6 +169,7 @@ void VtolType::update_mc_state()
 	}
 
 	_spoiler_setpoint_with_slewrate.update(spoiler_setpoint_hover, _dt);
+	_flaps_setpoint_with_slewrate.update(0.f, _dt);
 }
 
 void VtolType::update_fw_state()
@@ -218,6 +220,7 @@ void VtolType::update_fw_state()
 	check_quadchute_condition();
 
 	_spoiler_setpoint_with_slewrate.update(_actuators_fw_in->control[actuator_controls_s::INDEX_SPOILERS], _dt);
+	_flaps_setpoint_with_slewrate.update(_actuators_fw_in->control[actuator_controls_s::INDEX_FLAPS], _dt);
 }
 
 void VtolType::update_transition_state()

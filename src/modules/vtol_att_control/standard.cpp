@@ -288,6 +288,10 @@ void Standard::update_transition_state()
 			}
 		}
 
+		// set spoiler and flaps to 0
+		_flaps_setpoint_with_slewrate.update(0.f, _dt);
+		_spoiler_setpoint_with_slewrate.update(0.f, _dt);
+
 	} else if (_vtol_schedule.flight_mode == vtol_mode::TRANSITION_TO_MC) {
 
 		if (_v_control_mode->flag_control_climb_rate_enabled) {
@@ -319,6 +323,10 @@ void Standard::update_transition_state()
 		if (!_flag_idle_mc) {
 			_flag_idle_mc = set_idle_mc();
 		}
+
+		// set spoiler and flaps to the backtransition value
+		_flaps_setpoint_with_slewrate.update(_params->vt_flaps_bt, _dt);
+		_spoiler_setpoint_with_slewrate.update(_params->vt_spoilers_bt, _dt);
 	}
 
 	mc_weight = math::constrain(mc_weight, 0.0f, 1.0f);
@@ -370,8 +378,9 @@ void Standard::fill_actuator_outputs()
 		fw_out[actuator_controls_s::INDEX_PITCH]        = elevon_lock ? 0 : fw_in[actuator_controls_s::INDEX_PITCH];
 		fw_out[actuator_controls_s::INDEX_YAW]          = 0;
 		fw_out[actuator_controls_s::INDEX_THROTTLE]     = _pusher_throttle;
-		fw_out[actuator_controls_s::INDEX_FLAPS]        = 0;
-		fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = 0;
+		fw_out[actuator_controls_s::INDEX_FLAPS]        = _flaps_setpoint_with_slewrate.getState();
+		fw_out[actuator_controls_s::INDEX_SPOILERS]    	= _spoiler_setpoint_with_slewrate.getState();
+		fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = 0.f;
 
 		break;
 
@@ -391,7 +400,8 @@ void Standard::fill_actuator_outputs()
 		fw_out[actuator_controls_s::INDEX_PITCH]        = fw_in[actuator_controls_s::INDEX_PITCH];
 		fw_out[actuator_controls_s::INDEX_YAW]          = fw_in[actuator_controls_s::INDEX_YAW];
 		fw_out[actuator_controls_s::INDEX_THROTTLE]     = _pusher_throttle;
-		fw_out[actuator_controls_s::INDEX_FLAPS]        = fw_in[actuator_controls_s::INDEX_FLAPS];
+		fw_out[actuator_controls_s::INDEX_FLAPS]        = _flaps_setpoint_with_slewrate.getState();
+		fw_out[actuator_controls_s::INDEX_SPOILERS]    	= _spoiler_setpoint_with_slewrate.getState();
 		fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = _reverse_output;
 
 		break;
@@ -409,7 +419,8 @@ void Standard::fill_actuator_outputs()
 		fw_out[actuator_controls_s::INDEX_PITCH]        = fw_in[actuator_controls_s::INDEX_PITCH];
 		fw_out[actuator_controls_s::INDEX_YAW]          = fw_in[actuator_controls_s::INDEX_YAW];
 		fw_out[actuator_controls_s::INDEX_THROTTLE]     = fw_in[actuator_controls_s::INDEX_THROTTLE];
-		fw_out[actuator_controls_s::INDEX_FLAPS]        = fw_in[actuator_controls_s::INDEX_FLAPS];
+		fw_out[actuator_controls_s::INDEX_FLAPS]        = _flaps_setpoint_with_slewrate.getState();
+		fw_out[actuator_controls_s::INDEX_SPOILERS]    	= _spoiler_setpoint_with_slewrate.getState();
 		fw_out[actuator_controls_s::INDEX_AIRBRAKES]    = 0;
 		break;
 	}
