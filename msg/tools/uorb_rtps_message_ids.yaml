@@ -124,6 +124,7 @@ rtps:
     id: 57
   - msg: rc_channels
     id: 58
+    send: true
   - msg: rc_parameter_map
     id: 59
   - msg: safety
