@@ -91,6 +91,7 @@ px4_add_romfs_files(
 	4500_clover4
 	4900_crazyflie
 	4901_crazyflie21
+	4999_cstm_dshot
 
 	# [5000, 5999] Quadrotor +"
 	5001_quad_+
