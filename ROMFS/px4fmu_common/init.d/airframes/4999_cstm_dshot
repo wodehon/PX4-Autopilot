@@ -91,4 +91,4 @@ param set-default FD_FAIL_R 65
 param set-default FD_FAIL_P 65
 
 ### PX4 Logger
-param set-default SDLOG_MODE 0 # when armed until disarm
+param set-default SDLOG_MODE 2 # from boot until shutdown
